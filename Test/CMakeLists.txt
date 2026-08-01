@@ -7,6 +7,9 @@ set(TEST_SOURCES
 	Source/Frame.h
 	Source/Canvas.cpp
 	Source/Canvas.h
+	Source/Common.h
+	Source/XBoxController.cpp
+	Source/XBoxController.h
 )
 
 add_executable(TestApp WIN32
@@ -43,4 +46,5 @@ target_link_libraries(TestApp
 	wx::core
 	wx::base
 	wx::gl
+	Xinput9_1_0.lib
 )

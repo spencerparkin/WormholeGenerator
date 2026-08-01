@@ -1,6 +1,7 @@
 #include "Frame.h"
 #include "App.h"
 #include "Canvas.h"
+#include "Common.h"
 #include <wx/menu.h>
 #include <wx/sizer.h>
 

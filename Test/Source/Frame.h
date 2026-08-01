@@ -2,11 +2,6 @@
 
 #include <wx/frame.h>
 
-enum
-{
-	ID_Exit = wxID_HIGHEST + 1
-};
-
 class Canvas;
 
 class Frame : public wxFrame
