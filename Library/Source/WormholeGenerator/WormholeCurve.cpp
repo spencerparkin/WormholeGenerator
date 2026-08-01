@@ -19,14 +19,19 @@ void WormholeCurve::Clear()
 	this->rootNode.reset();
 }
 
-void WormholeCurve::Generate(const GeneratorConfig& config)
+bool WormholeCurve::Generate(const GeneratorConfig& config)
 {
+	if (!config.random)
+		return false;
+
 	this->Clear();
 
 	this->rootNode = std::make_shared<Node>();
 	this->rootNode->tangentPoint = config.initialTangentPoint;
 
 	this->GenerateRecursive(config, this->rootNode, 0);
+
+	return true;
 }
 
 void WormholeCurve::GenerateRecursive(const GeneratorConfig& config, std::shared_ptr<Node> parentNode, int currentDepth)
@@ -196,6 +201,7 @@ WormholeCurve::GeneratorConfig::GeneratorConfig()
 	this->maxDepth = 32;
 	this->maxAngleDeviation = M_PI / 12.0;
 	this->initialTangentPoint.location.SetComponents(0.0, 0.0, 0.0);
+	this->initialTangentPoint.unitDirection.SetComponents(0.0, 0.0, -1.0);
 	this->branchProbability = 0.1;
 	this->maxBranchFactor = 2;
 	this->minDistBetweenNodes = 10.0;
@@ -270,4 +276,14 @@ bool WormholeCurve::Traveler::CalcLocation(HappyMath::Vector3& curveLocation) co
 	EvaluateCubicBezierCurve(tangentPointA, tangentPointB, this->curveParameter, curveLocation);
 
 	return true;
+}
+
+//--------------------------------- WormholeCurve::Node ---------------------------------
+
+WormholeCurve::Node::Node()
+{
+}
+
+/*virtual*/ WormholeCurve::Node::~Node()
+{
 }

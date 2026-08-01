@@ -75,7 +75,7 @@ namespace WormholeGenerator
 		};
 
 		void Clear();
-		void Generate(const GeneratorConfig& config);
+		bool Generate(const GeneratorConfig& config);
 		void ForEachRenderLine(double curveLengthPerLine, std::function<void(const HappyMath::LineSegment&)> renderFunc) const;
 		void ForEachNode(std::function<void(const Node*)> nodeFunc) const;
 
