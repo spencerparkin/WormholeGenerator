@@ -1,0 +1,3 @@
+[submodule "Dependencies/HappyMath"]
+	path = Dependencies/HappyMath
+	url = https://github.com/spencerparkin/HappyMath
