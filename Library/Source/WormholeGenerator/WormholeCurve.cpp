@@ -173,6 +173,9 @@ void WormholeCurve::ForEachRenderLine(double curveLengthPerLine, std::function<v
 
 void WormholeCurve::ForEachNode(std::function<void(const Node*)> nodeFunc) const
 {
+	if (!this->rootNode.get())
+		return;
+
 	std::vector<std::shared_ptr<Node>> nodeArray;
 	nodeArray.push_back(this->rootNode);
 
@@ -181,10 +184,9 @@ void WormholeCurve::ForEachNode(std::function<void(const Node*)> nodeFunc) const
 		std::shared_ptr<Node> node = nodeArray[0];
 
 		if (nodeArray.size() > 1)
-		{
 			nodeArray[0] = nodeArray[nodeArray.size() - 1];
-			nodeArray.pop_back();
-		}
+
+		nodeArray.pop_back();
 
 		nodeFunc(node.get());
 

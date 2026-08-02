@@ -1,5 +1,6 @@
 #include "Canvas.h"
 #include "Common.h"
+#include "App.h"
 #include "HappyMath/Frustum.h"
 
 int Canvas::attributeList[] = { WX_GL_RGBA, WX_GL_DOUBLEBUFFER, 0 };
@@ -79,6 +80,19 @@ void Canvas::OnPaint(wxPaintEvent& event)
 	glColor4f(0.0f, 0.0f, 1.0f, 1.0f);
 	glVertex3f(0.0f, 0.0f, 0.0f);
 	glVertex3f(0.0f, 0.0f, 1.0f);
+
+	glEnd();
+
+	glPointSize(3.0);
+
+	glBegin(GL_POINTS);
+	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+
+	wxGetApp().wormholeCurve.ForEachNode([](const WormholeGenerator::WormholeCurve::Node* node) -> void
+		{
+			const HappyMath::Vector3& point = node->tangentPoint.location;
+			glVertex3d(point.x, point.y, point.z);
+		});
 
 	glEnd();
 

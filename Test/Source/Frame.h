@@ -12,6 +12,7 @@ public:
 
 private:
 	void OnExit(wxCommandEvent& event);
+	void OnGenerate(wxCommandEvent& event);
 
 	Canvas* canvas;
 };

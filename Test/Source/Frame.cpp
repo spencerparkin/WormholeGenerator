@@ -4,11 +4,13 @@
 #include "Common.h"
 #include <wx/menu.h>
 #include <wx/sizer.h>
+#include <wx/msgdlg.h>
 
 Frame::Frame() : wxFrame(nullptr, wxID_ANY, "Wormhole Generator Test App", wxDefaultPosition, wxSize(1500, 1200))
 {
 	wxMenu* programMenu = new wxMenu();
-
+	programMenu->Append(new wxMenuItem(programMenu, ID_Generate, "Generate", "Generate a wormhole."));
+	programMenu->AppendSeparator();
 	programMenu->Append(new wxMenuItem(programMenu, ID_Exit, "Exit", "Go do something else with your life."));
 
 	wxMenuBar* menuBar = new wxMenuBar();
@@ -24,6 +26,7 @@ Frame::Frame() : wxFrame(nullptr, wxID_ANY, "Wormhole Generator Test App", wxDef
 	this->SetSizer(boxSizer);
 
 	this->Bind(wxEVT_MENU, &Frame::OnExit, this, ID_Exit);
+	this->Bind(wxEVT_MENU, &Frame::OnGenerate, this, ID_Generate);
 }
 
 /*virtual*/ Frame::~Frame()
@@ -33,4 +36,16 @@ Frame::Frame() : wxFrame(nullptr, wxID_ANY, "Wormhole Generator Test App", wxDef
 void Frame::OnExit(wxCommandEvent& event)
 {
 	this->Close(true);
+}
+
+void Frame::OnGenerate(wxCommandEvent& event)
+{
+	WormholeGenerator::WormholeCurve::GeneratorConfig config;
+
+	config.random = &wxGetApp().random;
+
+	if (!wxGetApp().wormholeCurve.Generate(config))
+	{
+		wxMessageBox("Failed to generate wormhole", "Error!", wxICON_ERROR | wxOK, this);
+	}
 }

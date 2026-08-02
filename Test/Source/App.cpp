@@ -17,13 +17,6 @@ App::App()
 	if (!wxApp::OnInit())
 		return false;
 
-	WormholeGenerator::WormholeCurve::GeneratorConfig config;
-
-	config.random = &this->random;
-
-	if (!this->wormholeCurve.Generate(config))
-		return false;
-
 	this->frame = new Frame();
 	this->frame->Show();
 
