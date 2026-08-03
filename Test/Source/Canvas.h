@@ -5,6 +5,8 @@
 #include "XBoxController.h"
 #include "HappyMath/Vector3.h"
 #include "HappyMath/Matrix4x4.h"
+#include "HappyMath/LineSegment.h"
+#include "WormholeGenerator/WormholeTree.h"
 
 class Canvas : public wxGLCanvas
 {
@@ -49,4 +51,6 @@ private:
 	};
 
 	std::shared_ptr<Camera> camera;
+
+	std::vector<HappyMath::LineSegment> lineSegmentArray;
 };

@@ -3,6 +3,7 @@
 #include "HappyMath/Vector3.h"
 #include "HappyMath/Random.h"
 #include "HappyMath/LineSegment.h"
+#include "HappyMath/Polygon.h"
 #include <memory>
 #include <vector>
 #include <functional>
@@ -46,7 +47,7 @@ namespace WormholeGenerator
 			double maxDistBetweenNodes;
 		};
 
-		class Node
+		class Node : public std::enable_shared_from_this<Node>
 		{
 		public:
 			Node();
@@ -66,8 +67,9 @@ namespace WormholeGenerator
 			Traveler(const Traveler& traveler);
 			virtual ~Traveler();
 
-			bool Advance(double curveDistance, std::function<int(const Node*)> branchPredicate, double curveParameterDelta = 0.1);
+			bool Advance(double curveDistance, std::function<int(const Node*)> branchPredicate, double curveParameterDelta = 0.01);
 			bool CalcLocation(HappyMath::Vector3& curveLocation) const;
+			bool CalcLocationFrame(HappyMath::Vector3& xAxis, HappyMath::Vector3& yAxis, HappyMath::Vector3& zAxis) const;
 
 			double curveParameter;
 			std::shared_ptr<Node> node;
@@ -85,6 +87,7 @@ namespace WormholeGenerator
 
 		static void EvaluateCubicBezierCurve(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, HappyMath::Vector3& curvePoint);
 		static void EvaluateCubicBezierCurveDerivative(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, HappyMath::Vector3& curveDerivative);
+		static void EvaluateCubicBezierCurveSecondDerivative(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, HappyMath::Vector3& secondCurveDerivative);
 		static void GenerateCubicBezierControlPoints(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, HappyMath::Vector3* controlPointArray);
 
 		std::shared_ptr<Node> rootNode;

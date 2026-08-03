@@ -6,5 +6,6 @@ enum
 {
 	ID_Exit = wxID_HIGHEST + 1,
 	ID_Timer,
-	ID_Generate
+	ID_GenerateTree,
+	ID_GenerateSurfaceNormalPoints,
 };

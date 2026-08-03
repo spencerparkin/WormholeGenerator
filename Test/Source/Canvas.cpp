@@ -97,13 +97,21 @@ void Canvas::OnPaint(wxPaintEvent& event)
 	glEnd();
 
 	glBegin(GL_LINES);
-
 	glColor4f(0.5f, 0.5f, 0.5f, 1.0f);
-	wxGetApp().wormholeTree.ForEachRenderLine(16, [](const HappyMath::LineSegment& line) -> void
-		{
-			glVertex3d(line.point[0].x, line.point[0].y, line.point[0].z);
-			glVertex3d(line.point[1].x, line.point[1].y, line.point[1].z);
-		});
+
+	if (this->lineSegmentArray.size() == 0)
+	{
+		wxGetApp().wormholeTree.ForEachRenderLine(16, [this](const HappyMath::LineSegment& line) -> void
+			{
+				this->lineSegmentArray.push_back(line);
+			});
+	}
+
+	for (const HappyMath::LineSegment& line : this->lineSegmentArray)
+	{
+		glVertex3d(line.point[0].x, line.point[0].y, line.point[0].z);
+		glVertex3d(line.point[1].x, line.point[1].y, line.point[1].z);
+	}
 
 	glEnd();
 
