@@ -43,12 +43,12 @@ void Frame::OnGenerate(wxCommandEvent& event)
 	WormholeGenerator::WormholeTree::GeneratorConfig config;
 
 	config.random = &wxGetApp().random;
-	config.branchProbability = 0.0;
+	config.branchProbability = 0.05;
 	config.maxAngleDeviation = M_PI / 4.0;
-	config.maxDepth = 64;
+	config.maxDepth = 8;
 	config.minDistBetweenNodes = 1.0;
 	config.maxDistBetweenNodes = 2.0;
-	config.maxBranchFactor = 1;
+	config.maxBranchFactor = 2;
 
 	if (!wxGetApp().wormholeTree.Generate(config))
 	{
