@@ -15,7 +15,7 @@ public:
 	virtual bool OnInit() override;
 	virtual int OnExit() override;
 
-	WormholeGenerator::WormholeTree WormholeTree;
+	WormholeGenerator::WormholeTree wormholeTree;
 	HappyMath::Random random;
 
 private:

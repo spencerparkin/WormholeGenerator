@@ -50,7 +50,7 @@ void Frame::OnGenerate(wxCommandEvent& event)
 	config.maxDistBetweenNodes = 2.0;
 	config.maxBranchFactor = 1;
 
-	if (!wxGetApp().WormholeTree.Generate(config))
+	if (!wxGetApp().wormholeTree.Generate(config))
 	{
 		wxMessageBox("Failed to generate wormhole", "Error!", wxICON_ERROR | wxOK, this);
 	}

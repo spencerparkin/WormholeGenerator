@@ -69,7 +69,7 @@ void WormholeTree::GenerateRecursive(const GeneratorConfig& config, std::shared_
 	controlPointArray[0] = tangentPointA.location;
 	controlPointArray[3] = tangentPointB.location;
 
-	double length = (controlPointArray[3] - controlPointArray[0]).Length() / 4.0;
+	double length = (controlPointArray[3] - controlPointArray[0]).Length() / 2.0;
 
 	controlPointArray[1] = controlPointArray[0] + tangentPointA.unitDirection * length;
 	controlPointArray[2] = controlPointArray[3] - tangentPointB.unitDirection * length;
@@ -103,72 +103,32 @@ void WormholeTree::GenerateRecursive(const GeneratorConfig& config, std::shared_
 	curveDerivative = 3.0 * omt2 * (point[1] - point[0]) + 6.0 * omt * t * (point[2] - point[1]) + 3.0 * t2 * (point[3] - point[2]);
 }
 
-void WormholeTree::ForEachRenderLine(double curveLengthPerLine, std::function<void(const HappyMath::LineSegment&)> renderFunc) const
+void WormholeTree::ForEachRenderLine(int linesPerCurve, std::function<void(const HappyMath::LineSegment&)> renderFunc) const
 {
-	std::unordered_set<std::shared_ptr<Traveler>> travelerSet;
-
-	for (int i = 0; i < (int)this->rootNode->childNodeArray.size(); i++)
-	{
-		std::shared_ptr<Traveler> traveler = std::make_shared<Traveler>();
-		traveler->node = this->rootNode;
-		traveler->childTarget = i;
-
-		travelerSet.insert(traveler);
-	}
-
-	while (travelerSet.size() > 0)
-	{
-		std::unordered_set<std::shared_ptr<Traveler>> deadTravelersSet;
-
-		for (std::shared_ptr<Traveler> traveler : travelerSet)
+	this->ForEachNode([linesPerCurve, renderFunc](const Node* node) -> void
 		{
-			HappyMath::LineSegment lineSegment;
+			const TangentPoint& tangentPointA = node->tangentPoint;
 
-			traveler->CalcLocation(lineSegment.point[0]);
-
-			std::shared_ptr<Traveler> travelerCopy = std::make_shared<Traveler>(*traveler);
-
-			bool crossedNodeBoundary = false;
-			bool advanced = traveler->Advance(curveLengthPerLine, [&crossedNodeBoundary](const Node* node) -> int
-				{
-					crossedNodeBoundary = true;
-					return 0;
-				});
-
-			if (!advanced)
+			for (int i = 0; i < (int)node->childNodeArray.size(); i++)
 			{
-				deadTravelersSet.insert(traveler);
-				continue;
-			}
-			
-			traveler->CalcLocation(lineSegment.point[1]);
-			renderFunc(lineSegment);
+				const TangentPoint& tangentPointB = node->childNodeArray[i]->tangentPoint;
 
-			if (!crossedNodeBoundary)
-				continue;
-			
-			std::shared_ptr<Node> nextNode = travelerCopy->node->childNodeArray[traveler->childTarget];
-			for (int i = 1; i < (int)nextNode->childNodeArray.size(); i++)
-			{
-				std::shared_ptr<Traveler> newTraveler = std::make_shared<Traveler>(*travelerCopy);
+				HappyMath::LineSegment line;
+				int k = 0;
 
-				advanced = newTraveler->Advance(curveLengthPerLine, [i](const Node* node) -> int
-					{
-						return i;
-					});
-
-				if (advanced)
+				for (int j = 0; j <= linesPerCurve; j++)
 				{
-					newTraveler->CalcLocation(lineSegment.point[1]);
-					renderFunc(lineSegment);
-					travelerSet.insert(newTraveler);
+					double curveParameter = double(j) / double(linesPerCurve);
+
+					EvaluateCubicBezierCurve(tangentPointA, tangentPointB, curveParameter, line.point[k]);
+
+					k = 1 - k;
+
+					if (j > 0)
+						renderFunc(line);
 				}
 			}
-		}
-
-		for (std::shared_ptr<Traveler> deadTraveler : deadTravelersSet)
-			travelerSet.erase(deadTraveler);
-	}
+		});
 }
 
 void WormholeTree::ForEachNode(std::function<void(const Node*)> nodeFunc) const
