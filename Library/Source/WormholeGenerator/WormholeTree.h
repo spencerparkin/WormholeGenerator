@@ -14,7 +14,7 @@ namespace WormholeGenerator
 	 * continuity of the derivative across boundaries, but we're also
 	 * a tree.  This allows the curve to branch.
 	 */
-	class WormholeCurve
+	class WormholeTree
 	{
 	private:
 		friend class Traveler;
@@ -22,8 +22,8 @@ namespace WormholeGenerator
 	public:
 		class Node;
 
-		WormholeCurve();
-		virtual ~WormholeCurve();
+		WormholeTree();
+		virtual ~WormholeTree();
 
 		struct TangentPoint
 		{

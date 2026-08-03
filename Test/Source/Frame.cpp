@@ -40,7 +40,7 @@ void Frame::OnExit(wxCommandEvent& event)
 
 void Frame::OnGenerate(wxCommandEvent& event)
 {
-	WormholeGenerator::WormholeCurve::GeneratorConfig config;
+	WormholeGenerator::WormholeTree::GeneratorConfig config;
 
 	config.random = &wxGetApp().random;
 	config.branchProbability = 0.0;
@@ -50,7 +50,7 @@ void Frame::OnGenerate(wxCommandEvent& event)
 	config.maxDistBetweenNodes = 2.0;
 	config.maxBranchFactor = 1;
 
-	if (!wxGetApp().wormholeCurve.Generate(config))
+	if (!wxGetApp().WormholeTree.Generate(config))
 	{
 		wxMessageBox("Failed to generate wormhole", "Error!", wxICON_ERROR | wxOK, this);
 	}

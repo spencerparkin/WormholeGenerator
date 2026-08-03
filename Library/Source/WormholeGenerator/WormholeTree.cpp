@@ -1,25 +1,25 @@
-#include "WormholeGenerator/WormholeCurve.h"
+#include "WormholeGenerator/WormholeTree.h"
 #include <unordered_set>
 #include <math.h>
 
 using namespace WormholeGenerator;
 
-//--------------------------------- WormholeCurve ---------------------------------
+//--------------------------------- WormholeTree ---------------------------------
 
-WormholeCurve::WormholeCurve()
+WormholeTree::WormholeTree()
 {
 }
 
-/*virtual*/ WormholeCurve::~WormholeCurve()
+/*virtual*/ WormholeTree::~WormholeTree()
 {
 }
 
-void WormholeCurve::Clear()
+void WormholeTree::Clear()
 {
 	this->rootNode.reset();
 }
 
-bool WormholeCurve::Generate(const GeneratorConfig& config)
+bool WormholeTree::Generate(const GeneratorConfig& config)
 {
 	if (!config.random)
 		return false;
@@ -34,7 +34,7 @@ bool WormholeCurve::Generate(const GeneratorConfig& config)
 	return true;
 }
 
-void WormholeCurve::GenerateRecursive(const GeneratorConfig& config, std::shared_ptr<Node> parentNode, int currentDepth)
+void WormholeTree::GenerateRecursive(const GeneratorConfig& config, std::shared_ptr<Node> parentNode, int currentDepth)
 {
 	if (currentDepth > config.maxDepth)
 		return;
@@ -64,7 +64,7 @@ void WormholeCurve::GenerateRecursive(const GeneratorConfig& config, std::shared
 	}
 }
 
-/*static*/ void WormholeCurve::GenerateCubicBezierControlPoints(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, HappyMath::Vector3* controlPointArray)
+/*static*/ void WormholeTree::GenerateCubicBezierControlPoints(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, HappyMath::Vector3* controlPointArray)
 {
 	controlPointArray[0] = tangentPointA.location;
 	controlPointArray[3] = tangentPointB.location;
@@ -75,7 +75,7 @@ void WormholeCurve::GenerateRecursive(const GeneratorConfig& config, std::shared
 	controlPointArray[2] = controlPointArray[3] - tangentPointB.unitDirection * length;
 }
 
-/*static*/ void WormholeCurve::EvaluateCubicBezierCurve(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, HappyMath::Vector3& curvePoint)
+/*static*/ void WormholeTree::EvaluateCubicBezierCurve(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, HappyMath::Vector3& curvePoint)
 {
 	HappyMath::Vector3 point[4];
 	GenerateCubicBezierControlPoints(tangentPointA, tangentPointB, point);
@@ -90,7 +90,7 @@ void WormholeCurve::GenerateRecursive(const GeneratorConfig& config, std::shared
 	curvePoint = omt3 * point[0] + 3.0 * omt2 * t * point[1] + 3.0 * omt * t2 * point[2] + t3 * point[3];
 }
 
-/*static*/ void WormholeCurve::EvaluateCubicBezierCurveDerivative(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, HappyMath::Vector3& curveDerivative)
+/*static*/ void WormholeTree::EvaluateCubicBezierCurveDerivative(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, HappyMath::Vector3& curveDerivative)
 {
 	HappyMath::Vector3 point[4];
 	GenerateCubicBezierControlPoints(tangentPointA, tangentPointB, point);
@@ -103,7 +103,7 @@ void WormholeCurve::GenerateRecursive(const GeneratorConfig& config, std::shared
 	curveDerivative = 3.0 * omt2 * (point[1] - point[0]) + 6.0 * omt * t * (point[2] - point[1]) + 3.0 * t2 * (point[3] - point[2]);
 }
 
-void WormholeCurve::ForEachRenderLine(double curveLengthPerLine, std::function<void(const HappyMath::LineSegment&)> renderFunc) const
+void WormholeTree::ForEachRenderLine(double curveLengthPerLine, std::function<void(const HappyMath::LineSegment&)> renderFunc) const
 {
 	std::unordered_set<std::shared_ptr<Traveler>> travelerSet;
 
@@ -171,7 +171,7 @@ void WormholeCurve::ForEachRenderLine(double curveLengthPerLine, std::function<v
 	}
 }
 
-void WormholeCurve::ForEachNode(std::function<void(const Node*)> nodeFunc) const
+void WormholeTree::ForEachNode(std::function<void(const Node*)> nodeFunc) const
 {
 	if (!this->rootNode.get())
 		return;
@@ -195,9 +195,9 @@ void WormholeCurve::ForEachNode(std::function<void(const Node*)> nodeFunc) const
 	}
 }
 
-//--------------------------------- WormholeCurve::GeneratorConfig ---------------------------------
+//--------------------------------- WormholeTree::GeneratorConfig ---------------------------------
 
-WormholeCurve::GeneratorConfig::GeneratorConfig()
+WormholeTree::GeneratorConfig::GeneratorConfig()
 {
 	this->random = nullptr;
 	this->maxDepth = 32;
@@ -210,26 +210,26 @@ WormholeCurve::GeneratorConfig::GeneratorConfig()
 	this->maxDistBetweenNodes = 15.0;
 }
 
-//--------------------------------- WormholeCurve::Traveler ---------------------------------
+//--------------------------------- WormholeTree::Traveler ---------------------------------
 
-WormholeCurve::Traveler::Traveler()
+WormholeTree::Traveler::Traveler()
 {
 	this->curveParameter = 0.0;
 	this->childTarget = 0;
 }
 
-WormholeCurve::Traveler::Traveler(const Traveler& traveler)
+WormholeTree::Traveler::Traveler(const Traveler& traveler)
 {
 	this->curveParameter = traveler.curveParameter;
 	this->childTarget = traveler.childTarget;
 	this->node = traveler.node;
 }
 
-/*virtual*/ WormholeCurve::Traveler::~Traveler()
+/*virtual*/ WormholeTree::Traveler::~Traveler()
 {
 }
 
-bool WormholeCurve::Traveler::Advance(double curveDistance, std::function<int(const Node*)> branchPredicate, double curveParameterDelta /*= 0.1*/)
+bool WormholeTree::Traveler::Advance(double curveDistance, std::function<int(const Node*)> branchPredicate, double curveParameterDelta /*= 0.1*/)
 {
 	if (!this->node.get())
 		return false;
@@ -264,7 +264,7 @@ bool WormholeCurve::Traveler::Advance(double curveDistance, std::function<int(co
 	return true;
 }
 
-bool WormholeCurve::Traveler::CalcLocation(HappyMath::Vector3& curveLocation) const
+bool WormholeTree::Traveler::CalcLocation(HappyMath::Vector3& curveLocation) const
 {
 	if (!this->node.get())
 		return false;
@@ -280,12 +280,12 @@ bool WormholeCurve::Traveler::CalcLocation(HappyMath::Vector3& curveLocation) co
 	return true;
 }
 
-//--------------------------------- WormholeCurve::Node ---------------------------------
+//--------------------------------- WormholeTree::Node ---------------------------------
 
-WormholeCurve::Node::Node()
+WormholeTree::Node::Node()
 {
 }
 
-/*virtual*/ WormholeCurve::Node::~Node()
+/*virtual*/ WormholeTree::Node::~Node()
 {
 }

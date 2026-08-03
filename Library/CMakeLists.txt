@@ -1,8 +1,8 @@
 # CMakeLists.txt for WormholeGenerator C++ library
 
 set(WORMHOLE_GENERATOR_LIBRARY_SOURCES
-	Source/WormholeGenerator/WormholeCurve.cpp
-	Source/WormholeGenerator/WormholeCurve.h
+	Source/WormholeGenerator/WormholeTree.cpp
+	Source/WormholeGenerator/WormholeTree.h
 )
 
 add_library(WormholeGenerator STATIC ${WORMHOLE_GENERATOR_LIBRARY_SOURCES})

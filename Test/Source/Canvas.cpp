@@ -88,7 +88,7 @@ void Canvas::OnPaint(wxPaintEvent& event)
 	glBegin(GL_POINTS);
 	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
-	wxGetApp().wormholeCurve.ForEachNode([](const WormholeGenerator::WormholeCurve::Node* node) -> void
+	wxGetApp().WormholeTree.ForEachNode([](const WormholeGenerator::WormholeTree::Node* node) -> void
 		{
 			const HappyMath::Vector3& point = node->tangentPoint.location;
 			glVertex3d(point.x, point.y, point.z);
@@ -99,7 +99,7 @@ void Canvas::OnPaint(wxPaintEvent& event)
 	glBegin(GL_LINES);
 	glColor4f(0.5f, 0.5f, 0.5f, 1.0f);
 
-	wxGetApp().wormholeCurve.ForEachNode([](const WormholeGenerator::WormholeCurve::Node* node) -> void
+	wxGetApp().WormholeTree.ForEachNode([](const WormholeGenerator::WormholeTree::Node* node) -> void
 		{
 			HappyMath::Vector3 point = node->tangentPoint.location;
 			glVertex3d(point.x, point.y, point.z);

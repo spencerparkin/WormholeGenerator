@@ -1,6 +1,6 @@
 #pragma once
 
-#include "WormholeGenerator/WormholeCurve.h"
+#include "WormholeGenerator/WormholeTree.h"
 #include "HappyMath/Random.h"
 #include <wx/app.h>
 
@@ -15,7 +15,7 @@ public:
 	virtual bool OnInit() override;
 	virtual int OnExit() override;
 
-	WormholeGenerator::WormholeCurve wormholeCurve;
+	WormholeGenerator::WormholeTree WormholeTree;
 	HappyMath::Random random;
 
 private:
