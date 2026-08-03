@@ -3,6 +3,8 @@
 set(WORMHOLE_GENERATOR_LIBRARY_SOURCES
 	Source/WormholeGenerator/WormholeTree.cpp
 	Source/WormholeGenerator/WormholeTree.h
+	Source/WormholeGenerator/PointCloud.cpp
+	Source/WormholeGenerator/PointCloud.h
 )
 
 add_library(WormholeGenerator STATIC ${WORMHOLE_GENERATOR_LIBRARY_SOURCES})
