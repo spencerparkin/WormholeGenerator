@@ -96,6 +96,23 @@ void Canvas::OnPaint(wxPaintEvent& event)
 
 	glEnd();
 
+	glBegin(GL_LINES);
+	glColor4f(0.5f, 0.5f, 0.5f, 1.0f);
+
+	wxGetApp().wormholeCurve.ForEachNode([](const WormholeGenerator::WormholeCurve::Node* node) -> void
+		{
+			HappyMath::Vector3 point = node->tangentPoint.location;
+			glVertex3d(point.x, point.y, point.z);
+
+			for (int i = 0; i < (int)node->childNodeArray.size(); i++)
+			{
+				point = node->childNodeArray[i]->tangentPoint.location;
+				glVertex3d(point.x, point.y, point.z);
+			}
+		});
+
+	glEnd();
+
 	glFlush();
 
 	this->SwapBuffers();

@@ -17,6 +17,8 @@ App::App()
 	if (!wxApp::OnInit())
 		return false;
 
+	this->random.SetSeed(1234);
+
 	this->frame = new Frame();
 	this->frame->Show();
 

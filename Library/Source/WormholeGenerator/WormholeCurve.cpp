@@ -55,7 +55,7 @@ void WormholeCurve::GenerateRecursive(const GeneratorConfig& config, std::shared
 		HappyMath::Vector3 unitDirection;
 		unitDirection.SetAsRandomDirectionInCone(*config.random, parentNode->tangentPoint.unitDirection, config.maxAngleDeviation);
 
-		childNode->tangentPoint.location = unitDirection * distance;
+		childNode->tangentPoint.location = parentNode->tangentPoint.location + unitDirection * distance;
 		childNode->tangentPoint.unitDirection.SetAsRandomDirectionInCone(*config.random, unitDirection, config.maxAngleDeviation);
 
 		parentNode->childNodeArray.push_back(childNode);
