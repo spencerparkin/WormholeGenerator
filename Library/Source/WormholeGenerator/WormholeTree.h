@@ -10,6 +10,12 @@
 
 namespace WormholeGenerator
 {
+	struct SurfacePoint
+	{
+		HappyMath::Vector3 location;
+		HappyMath::Vector3 normal;
+	};
+
 	/**
 	 * These are cubic Bezier curves chained together so that we get
 	 * continuity of the derivative across boundaries, but we're also
@@ -57,38 +63,22 @@ namespace WormholeGenerator
 			std::vector<std::shared_ptr<Node>> childNodeArray;
 		};
 
-		/**
-		 * 
-		 */
-		class Traveler
-		{
-		public:
-			Traveler();
-			Traveler(const Traveler& traveler);
-			virtual ~Traveler();
-
-			bool Advance(double curveDistance, std::function<int(const Node*)> branchPredicate, double curveParameterDelta = 0.01);
-			bool CalcLocation(HappyMath::Vector3& curveLocation) const;
-			bool CalcLocationFrame(HappyMath::Vector3& xAxis, HappyMath::Vector3& yAxis, HappyMath::Vector3& zAxis) const;
-
-			double curveParameter;
-			std::shared_ptr<Node> node;
-			int childTarget;
-		};
-
 		void Clear();
 		bool Generate(const GeneratorConfig& config);
 		void ForEachRenderLine(int linesPerCurve, std::function<void(const HappyMath::LineSegment&)> renderFunc) const;
 		void ForEachNode(std::function<void(const Node*)> nodeFunc) const;
+		void GenerateSurfacePoints(std::function<void(const SurfacePoint&)> pointFunc) const;
 
 	private:
 
 		void GenerateRecursive(const GeneratorConfig& config, std::shared_ptr<Node> parentNode, int currentDepth);
-
+		void GenerateSurfacePointsForNode(const Node* node, std::function<void(const SurfacePoint&)> pointFunc) const;
+		
 		static void EvaluateCubicBezierCurve(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, HappyMath::Vector3& curvePoint);
 		static void EvaluateCubicBezierCurveDerivative(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, HappyMath::Vector3& curveDerivative);
 		static void EvaluateCubicBezierCurveSecondDerivative(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, HappyMath::Vector3& secondCurveDerivative);
 		static void GenerateCubicBezierControlPoints(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, HappyMath::Vector3* controlPointArray);
+		static void FindClosestPointOnCubicBezierCurve(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, const HappyMath::Vector3& point, HappyMath::Vector3& closestPoint);
 
 		std::shared_ptr<Node> rootNode;
 	};

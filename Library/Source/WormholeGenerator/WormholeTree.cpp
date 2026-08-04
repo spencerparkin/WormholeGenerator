@@ -115,6 +115,43 @@ void WormholeTree::GenerateRecursive(const GeneratorConfig& config, std::shared_
 	secondCurveDerivative = 6.0 * omt * (point[2] - 2.0 * point[1] + point[0]) + 6.0 * t * (point[3] - 2.0 * point[2] + point[1]);
 }
 
+/*static*/ void WormholeTree::FindClosestPointOnCubicBezierCurve(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, const HappyMath::Vector3& point, HappyMath::Vector3& closestPoint)
+{
+	int stepsPerPass = 10;
+	double minCurveParameter = 0.0;
+	double maxCurveParameter = 1.0;
+	double epsilon = 0.01;
+
+	while ((maxCurveParameter - minCurveParameter) > epsilon)
+	{
+		double smallestSquareDistance = std::numeric_limits<double>::max();
+
+		int j = -1;
+
+		for (int i = 0; i < stepsPerPass; i++)
+		{
+			double curveParameter = minCurveParameter + (double(i) / double(stepsPerPass - 1)) * (maxCurveParameter - minCurveParameter);
+
+			HappyMath::Vector3 curvePoint;
+			EvaluateCubicBezierCurve(tangentPointA, tangentPointB, curveParameter, curvePoint);
+
+			double squareDistance = (curvePoint - point).SquareLength();
+			if (squareDistance < smallestSquareDistance)
+			{
+				smallestSquareDistance = squareDistance;
+				closestPoint = curvePoint;
+				j = i;
+			}
+		}
+
+		double newMin = minCurveParameter + (double(j - 1) / double(stepsPerPass - 1)) * (maxCurveParameter - minCurveParameter);
+		double newMax = minCurveParameter + (double(j + 1) / double(stepsPerPass - 1)) * (maxCurveParameter - minCurveParameter);
+
+		minCurveParameter = newMin;
+		maxCurveParameter = newMax;
+	}
+}
+
 void WormholeTree::ForEachRenderLine(int linesPerCurve, std::function<void(const HappyMath::LineSegment&)> renderFunc) const
 {
 	this->ForEachNode([linesPerCurve, renderFunc](const Node* node) -> void
@@ -167,6 +204,77 @@ void WormholeTree::ForEachNode(std::function<void(const Node*)> nodeFunc) const
 	}
 }
 
+void WormholeTree::GenerateSurfacePoints(std::function<void(const SurfacePoint&)> pointFunc) const
+{
+	this->ForEachNode([this, pointFunc](const Node* node) -> void
+		{
+			this->GenerateSurfacePointsForNode(node, pointFunc);
+		});
+}
+
+void WormholeTree::GenerateSurfacePointsForNode(const Node* node, std::function<void(const SurfacePoint&)> pointFunc) const
+{
+	int samplesPerLocation = 32;
+	int numSteps = 16;
+	double wormholeRadius = 0.5;
+	
+	for (int i = 0; i < (int)node->childNodeArray.size(); i++)
+	{
+		const Node* childNodeA = node->childNodeArray[i].get();
+
+		for (int j = 0; j < numSteps; j++)
+		{
+			double curveParameter = double(j) / double(numSteps - 1);
+
+			HappyMath::Vector3 curvePoint;
+			EvaluateCubicBezierCurve(node->tangentPoint, childNodeA->tangentPoint, curveParameter, curvePoint);
+
+			// Note that we're not getting the TNB frame here, but we're getting a frame that we can use.
+			HappyMath::Vector3 xAxis, yAxis, zAxis;
+			EvaluateCubicBezierCurveDerivative(node->tangentPoint, childNodeA->tangentPoint, curveParameter, zAxis);
+			zAxis.Normalize();
+			zAxis *= -1.0;
+			xAxis.SetAsOrthogonalTo(zAxis);
+			xAxis.Normalize();
+			yAxis = zAxis.Cross(xAxis);
+
+			for (int k = 0; k < samplesPerLocation; k++)
+			{
+				double angle = (double(k) / double(samplesPerLocation)) * 2.0 * M_PI;
+
+				SurfacePoint surfacePoint;
+				surfacePoint.location = curvePoint + wormholeRadius * (xAxis * ::cos(angle) + yAxis * ::sin(angle));
+				surfacePoint.normal = (surfacePoint.location - curvePoint).Normalized();
+
+				bool cullPoint = false;
+
+				for (int l = 0; l < (int)node->childNodeArray.size(); l++)
+				{
+					if (i == l)
+						continue;
+
+					const Node* childNodeB = node->childNodeArray[l].get();
+
+					HappyMath::Vector3 closestPoint;
+					FindClosestPointOnCubicBezierCurve(node->tangentPoint, childNodeB->tangentPoint, surfacePoint.location, closestPoint);
+
+					double squareDistance = (closestPoint - surfacePoint.location).SquareLength();
+					if (squareDistance < wormholeRadius * wormholeRadius)
+					{
+						cullPoint = true;
+						break;
+					}
+				}
+
+				if (!cullPoint)
+				{
+					pointFunc(surfacePoint);
+				}
+			}
+		}
+	}
+}
+
 //--------------------------------- WormholeTree::GeneratorConfig ---------------------------------
 
 WormholeTree::GeneratorConfig::GeneratorConfig()
@@ -180,108 +288,6 @@ WormholeTree::GeneratorConfig::GeneratorConfig()
 	this->maxBranchFactor = 2;
 	this->minDistBetweenNodes = 10.0;
 	this->maxDistBetweenNodes = 15.0;
-}
-
-//--------------------------------- WormholeTree::Traveler ---------------------------------
-
-WormholeTree::Traveler::Traveler()
-{
-	this->curveParameter = 0.0;
-	this->childTarget = 0;
-}
-
-WormholeTree::Traveler::Traveler(const Traveler& traveler)
-{
-	this->curveParameter = traveler.curveParameter;
-	this->childTarget = traveler.childTarget;
-	this->node = traveler.node;
-}
-
-/*virtual*/ WormholeTree::Traveler::~Traveler()
-{
-}
-
-bool WormholeTree::Traveler::Advance(double curveDistance, std::function<int(const Node*)> branchPredicate, double curveParameterDelta /*= 0.01*/)
-{
-	if (!this->node.get())
-		return false;
-
-	if (this->childTarget < 0 || this->childTarget >= (int)this->node->childNodeArray.size())
-		return false;
-
-	const TangentPoint& tangentPointA = this->node->tangentPoint;
-	const TangentPoint& tangentPointB = this->node->childNodeArray[this->childTarget]->tangentPoint;
-
-	double totalDistanceTraveled = 0.0;
-
-	while (totalDistanceTraveled <= curveDistance)
-	{
-		HappyMath::Vector3 curveDerivative;
-		EvaluateCubicBezierCurveDerivative(tangentPointA, tangentPointB, this->curveParameter, curveDerivative);
-
-		HappyMath::Vector3 curveDelta = curveDerivative * curveParameterDelta;
-		totalDistanceTraveled += curveDelta.Length();
-
-		if(this->curveParameter + curveParameterDelta >= 1.0)
-		{
-			this->node = this->node->childNodeArray[this->childTarget];
-			this->childTarget = branchPredicate(this->node.get());
-			if (this->childTarget < 0)
-				return false;
-		}
-
-		this->curveParameter += curveParameterDelta;
-		if (this->curveParameter > 1.0)
-			this->curveParameter -= 1.0;
-	}
-
-	return true;
-}
-
-bool WormholeTree::Traveler::CalcLocation(HappyMath::Vector3& curveLocation) const
-{
-	if (!this->node.get())
-		return false;
-
-	if (this->childTarget < 0 || this->childTarget >= (int)this->node->childNodeArray.size())
-		return false;
-
-	const TangentPoint& tangentPointA = this->node->tangentPoint;
-	const TangentPoint& tangentPointB = this->node->childNodeArray[this->childTarget]->tangentPoint;
-
-	EvaluateCubicBezierCurve(tangentPointA, tangentPointB, this->curveParameter, curveLocation);
-
-	return true;
-}
-
-bool WormholeTree::Traveler::CalcLocationFrame(HappyMath::Vector3& xAxis, HappyMath::Vector3& yAxis, HappyMath::Vector3& zAxis) const
-{
-	if (!this->node.get())
-		return false;
-
-	if (this->childTarget < 0 || this->childTarget >= (int)this->node->childNodeArray.size())
-		return false;
-
-	const TangentPoint& tangentPointA = this->node->tangentPoint;
-	const TangentPoint& tangentPointB = this->node->childNodeArray[this->childTarget]->tangentPoint;
-
-	EvaluateCubicBezierCurveDerivative(tangentPointA, tangentPointB, this->curveParameter, zAxis);
-	
-	if (!zAxis.Normalize())
-		return false;
-
-	// Note that we're not getting the TNB frame here, but we're getting a frame that we can use.
-
-	zAxis *= -1.0;
-
-	xAxis.SetAsOrthogonalTo(zAxis);
-	
-	if (!xAxis.Normalize())
-		return false;
-
-	yAxis = zAxis.Cross(xAxis);
-
-	return true;
 }
 
 //--------------------------------- WormholeTree::Node ---------------------------------

@@ -16,6 +16,7 @@ public:
 	virtual int OnExit() override;
 
 	WormholeGenerator::WormholeTree wormholeTree;
+	std::vector<WormholeGenerator::SurfacePoint> surfacePointArray;
 	HappyMath::Random random;
 
 private:

@@ -101,7 +101,7 @@ void Canvas::OnPaint(wxPaintEvent& event)
 
 	if (this->lineSegmentArray.size() == 0)
 	{
-		wxGetApp().wormholeTree.ForEachRenderLine(16, [this](const HappyMath::LineSegment& line) -> void
+		wxGetApp().wormholeTree.ForEachRenderLine(16 /* linesPerCurve */, [this](const HappyMath::LineSegment& line) -> void
 			{
 				this->lineSegmentArray.push_back(line);
 			});
@@ -114,6 +114,34 @@ void Canvas::OnPaint(wxPaintEvent& event)
 	}
 
 	glEnd();
+
+	if (wxGetApp().surfacePointArray.size() > 0)
+	{
+		glBegin(GL_POINTS);
+		glColor4f(1.0f, 0.0f, 0.0f, 1.0f);
+
+		for (const WormholeGenerator::SurfacePoint& surfacePoint : wxGetApp().surfacePointArray)
+		{
+			glVertex3d(surfacePoint.location.x, surfacePoint.location.y, surfacePoint.location.z);
+		}
+
+		glEnd();
+		
+		/*
+		glBegin(GL_LINES);
+		glColor4f(0.0f, 1.0f, 0.0f, 1.0f);
+
+		for (const WormholeGenerator::SurfacePoint& surfacePoint : wxGetApp().surfacePointArray)
+		{
+			glVertex3d(surfacePoint.location.x, surfacePoint.location.y, surfacePoint.location.z);
+
+			HappyMath::Vector3 tip = surfacePoint.location + 0.1 * surfacePoint.normal;
+			glVertex3d(tip.x, tip.y, tip.z);
+		}
+
+		glEnd();
+		*/
+	}
 
 	glFlush();
 

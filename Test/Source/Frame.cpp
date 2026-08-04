@@ -10,7 +10,7 @@ Frame::Frame() : wxFrame(nullptr, wxID_ANY, "Wormhole Generator Test App", wxDef
 {
 	wxMenu* programMenu = new wxMenu();
 	programMenu->Append(new wxMenuItem(programMenu, ID_GenerateTree, "Generate Tree", "Generate a wormhole tree."));
-	programMenu->Append(new wxMenuItem(programMenu, ID_GenerateSurfaceNormalPoints, "Generate Normal Points", "Generate a sufficiently large set of surface normal points from which a mesh can be generated."));
+	programMenu->Append(new wxMenuItem(programMenu, ID_GenerateSurfacePoints, "Generate Surface Points", "Generate a sufficiently large set of surface normal points from which a mesh can be generated."));
 	programMenu->AppendSeparator();
 	programMenu->Append(new wxMenuItem(programMenu, ID_Exit, "Exit", "Go do something else with your life."));
 
@@ -28,7 +28,7 @@ Frame::Frame() : wxFrame(nullptr, wxID_ANY, "Wormhole Generator Test App", wxDef
 
 	this->Bind(wxEVT_MENU, &Frame::OnExit, this, ID_Exit);
 	this->Bind(wxEVT_MENU, &Frame::OnGenerate, this, ID_GenerateTree);
-	this->Bind(wxEVT_MENU, &Frame::OnGenerate, this, ID_GenerateSurfaceNormalPoints);
+	this->Bind(wxEVT_MENU, &Frame::OnGenerate, this, ID_GenerateSurfacePoints);
 }
 
 /*virtual*/ Frame::~Frame()
@@ -63,9 +63,12 @@ void Frame::OnGenerate(wxCommandEvent& event)
 
 			break;
 		}
-		case ID_GenerateSurfaceNormalPoints:
+		case ID_GenerateSurfacePoints:
 		{
-			//...
+			wxGetApp().wormholeTree.GenerateSurfacePoints([](const WormholeGenerator::SurfacePoint& surfacePoint) -> void
+				{
+					wxGetApp().surfacePointArray.push_back(surfacePoint);
+				});
 
 			break;
 		}
