@@ -88,10 +88,7 @@ void Frame::OnGenerate(wxCommandEvent& event)
 		}
 		case ID_GenerateMesh:
 		{
-			if (!wxGetApp().graph.ToPolygonMesh(wxGetApp().mesh))
-			{
-				wxMessageBox("Failed to generate mesh!", "Error!", wxICON_ERROR | wxOK, this);
-			}
+			wxGetApp().graph.ToPolygonMesh(wxGetApp().mesh);
 
 			break;
 		}

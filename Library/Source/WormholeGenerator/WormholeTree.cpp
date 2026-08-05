@@ -226,8 +226,8 @@ void WormholeTree::GenerateSurfacePoints(std::function<void(const SurfacePoint&)
 void WormholeTree::GenerateSurfacePointsForNode(const Node* node, std::function<void(const SurfacePoint&)> pointFunc) const
 {
 	int samplesPerLocation = 32;
-	int numSteps = 16;
-	double wormholeRadius = 0.5;
+	int numSteps = 32;
+	double wormholeRadius = 0.25;
 	
 	for (int i = 0; i < (int)node->childNodeArray.size(); i++)
 	{

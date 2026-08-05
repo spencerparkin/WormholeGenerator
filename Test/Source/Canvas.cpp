@@ -163,6 +163,28 @@ void Canvas::OnPaint(wxPaintEvent& event)
 		glEnd();
 	}
 
+	for (int i = 0; i < wxGetApp().mesh.GetNumPolygons(); i++)
+	{
+		const HappyMath::PolygonMesh::Polygon& polygon = wxGetApp().mesh.GetPolygon(i);
+
+		glBegin(GL_POLYGON);
+
+		double r = wxGetApp().random.InRange(0.0, 1.0);
+		double g = wxGetApp().random.InRange(0.0, 1.0);
+		double b = wxGetApp().random.InRange(0.0, 1.0);
+
+		glColor3d(r, g, b);
+
+		for (int j = 0; j < (int)polygon.vertexArray.size(); j++)
+		{
+			const HappyMath::Vector3& vertex = wxGetApp().mesh.GetVertex(polygon.vertexArray[j]);
+
+			glVertex3d(vertex.x, vertex.y, vertex.z);
+		}
+
+		glEnd();
+	}
+
 	glFlush();
 
 	this->SwapBuffers();
