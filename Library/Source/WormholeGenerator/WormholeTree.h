@@ -4,6 +4,7 @@
 #include "HappyMath/Random.h"
 #include "HappyMath/LineSegment.h"
 #include "HappyMath/Polygon.h"
+#include "HappyMath/Graph.h"
 #include <memory>
 #include <vector>
 #include <functional>
@@ -68,6 +69,7 @@ namespace WormholeGenerator
 		void ForEachRenderLine(int linesPerCurve, std::function<void(const HappyMath::LineSegment&)> renderFunc) const;
 		void ForEachNode(std::function<void(const Node*)> nodeFunc) const;
 		void GenerateSurfacePoints(std::function<void(const SurfacePoint&)> pointFunc) const;
+		void PopulateGraphWithSurfacePoints(HappyMath::Graph& graph) const;
 
 	private:
 

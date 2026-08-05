@@ -143,6 +143,26 @@ void Canvas::OnPaint(wxPaintEvent& event)
 		*/
 	}
 
+	if (wxGetApp().edgeSet.size() > 0)
+	{
+		glBegin(GL_LINES);
+		glColor4f(0.5f, 0.5f, 1.0f, 1.0f);
+
+		for (auto edge : wxGetApp().edgeSet)
+		{
+			const HappyMath::Graph::Node* nodeA = wxGetApp().graph.GetNode(edge.i);
+			const HappyMath::Graph::Node* nodeB = wxGetApp().graph.GetNode(edge.j);
+
+			const HappyMath::Vector3& vertexA = nodeA->GetVertex();
+			const HappyMath::Vector3& vertexB = nodeB->GetVertex();
+
+			glVertex3d(vertexA.x, vertexA.y, vertexA.z);
+			glVertex3d(vertexB.x, vertexB.y, vertexB.z);
+		}
+
+		glEnd();
+	}
+
 	glFlush();
 
 	this->SwapBuffers();

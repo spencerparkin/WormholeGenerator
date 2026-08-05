@@ -11,6 +11,8 @@ Frame::Frame() : wxFrame(nullptr, wxID_ANY, "Wormhole Generator Test App", wxDef
 	wxMenu* programMenu = new wxMenu();
 	programMenu->Append(new wxMenuItem(programMenu, ID_GenerateTree, "Generate Tree", "Generate a wormhole tree."));
 	programMenu->Append(new wxMenuItem(programMenu, ID_GenerateSurfacePoints, "Generate Surface Points", "Generate a sufficiently large set of surface normal points from which a mesh can be generated."));
+	programMenu->Append(new wxMenuItem(programMenu, ID_GenerateGraph, "Generate Graph", "Generate a graph from surface points."));
+	programMenu->Append(new wxMenuItem(programMenu, ID_GenerateMesh, "Generate Mesh", "Generate a mesh from the graph."));
 	programMenu->AppendSeparator();
 	programMenu->Append(new wxMenuItem(programMenu, ID_Exit, "Exit", "Go do something else with your life."));
 
@@ -29,6 +31,8 @@ Frame::Frame() : wxFrame(nullptr, wxID_ANY, "Wormhole Generator Test App", wxDef
 	this->Bind(wxEVT_MENU, &Frame::OnExit, this, ID_Exit);
 	this->Bind(wxEVT_MENU, &Frame::OnGenerate, this, ID_GenerateTree);
 	this->Bind(wxEVT_MENU, &Frame::OnGenerate, this, ID_GenerateSurfacePoints);
+	this->Bind(wxEVT_MENU, &Frame::OnGenerate, this, ID_GenerateGraph);
+	this->Bind(wxEVT_MENU, &Frame::OnGenerate, this, ID_GenerateMesh);
 }
 
 /*virtual*/ Frame::~Frame()
@@ -58,7 +62,7 @@ void Frame::OnGenerate(wxCommandEvent& event)
 
 			if (!wxGetApp().wormholeTree.Generate(config))
 			{
-				wxMessageBox("Failed to generate wormhole", "Error!", wxICON_ERROR | wxOK, this);
+				wxMessageBox("Failed to generate wormhole!", "Error!", wxICON_ERROR | wxOK, this);
 			}
 
 			break;
@@ -69,6 +73,25 @@ void Frame::OnGenerate(wxCommandEvent& event)
 				{
 					wxGetApp().surfacePointArray.push_back(surfacePoint);
 				});
+
+			break;
+		}
+		case ID_GenerateGraph:
+		{
+			wxGetApp().wormholeTree.PopulateGraphWithSurfacePoints(wxGetApp().graph);
+
+			wxGetApp().graph.AutoCompleteEdges(0.3, 8);
+
+			wxGetApp().graph.GenerateEdgeSet(wxGetApp().edgeSet);
+
+			break;
+		}
+		case ID_GenerateMesh:
+		{
+			if (!wxGetApp().graph.ToPolygonMesh(wxGetApp().mesh))
+			{
+				wxMessageBox("Failed to generate mesh!", "Error!", wxICON_ERROR | wxOK, this);
+			}
 
 			break;
 		}

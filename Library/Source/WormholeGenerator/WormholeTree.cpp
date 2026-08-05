@@ -204,6 +204,17 @@ void WormholeTree::ForEachNode(std::function<void(const Node*)> nodeFunc) const
 	}
 }
 
+void WormholeTree::PopulateGraphWithSurfacePoints(HappyMath::Graph& graph) const
+{
+	this->GenerateSurfacePoints([&graph](const SurfacePoint& surfacePoint) -> void
+		{
+			auto node = new HappyMath::Graph::Node();
+			node->SetVertex(surfacePoint.location);
+			node->SetNormal(surfacePoint.normal);
+			graph.AddNode(node);
+		});
+}
+
 void WormholeTree::GenerateSurfacePoints(std::function<void(const SurfacePoint&)> pointFunc) const
 {
 	this->ForEachNode([this, pointFunc](const Node* node) -> void

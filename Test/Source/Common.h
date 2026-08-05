@@ -8,4 +8,6 @@ enum
 	ID_Timer,
 	ID_GenerateTree,
 	ID_GenerateSurfacePoints,
+	ID_GenerateGraph,
+	ID_GenerateMesh,
 };

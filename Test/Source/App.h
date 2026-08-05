@@ -2,6 +2,8 @@
 
 #include "WormholeGenerator/WormholeTree.h"
 #include "HappyMath/Random.h"
+#include "HappyMath/Graph.h"
+#include "HappyMath/PolygonMesh.h"
 #include <wx/app.h>
 
 class Frame;
@@ -17,6 +19,9 @@ public:
 
 	WormholeGenerator::WormholeTree wormholeTree;
 	std::vector<WormholeGenerator::SurfacePoint> surfacePointArray;
+	HappyMath::Graph graph;
+	std::set<HappyMath::Graph::UnorderedEdge, HappyMath::Graph::UnorderedEdge> edgeSet;
+	HappyMath::PolygonMesh mesh;
 	HappyMath::Random random;
 
 private:
