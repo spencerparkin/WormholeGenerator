@@ -1,11 +1,13 @@
 #include "App.h"
 #include "Frame.h"
+#include "Common.h"
 
 wxIMPLEMENT_APP(App);
 
 App::App()
 {
 	this->frame = nullptr;
+	this->drawFlags = DF_SPLINES | DF_SURFACE_POINTS | DF_SURFACE_POLYGONS | DF_NODE_POINTS;
 }
 
 /*virtual*/ App::~App()
@@ -17,7 +19,7 @@ App::App()
 	if (!wxApp::OnInit())
 		return false;
 
-	this->random.SetSeed(1234);
+	this->random.SetSeed(1000);
 
 	this->frame = new Frame();
 	this->frame->Show();

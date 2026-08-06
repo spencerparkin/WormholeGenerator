@@ -18,9 +18,13 @@ WormholeTree::WormholeTree()
 void WormholeTree::Clear()
 {
 	this->rootNode.reset();
+	this->graph.Clear();
+	this->mesh.Clear();
+	this->surfacePointArray.clear();
+	this->edgeSet.clear();
 }
 
-bool WormholeTree::Generate(const GeneratorConfig& config)
+bool WormholeTree::Generate(const GeneratorConfig& config, ProgressReporterInterface* progressReporter /*= nullptr*/)
 {
 	if (!config.random)
 		return false;
@@ -31,6 +35,44 @@ bool WormholeTree::Generate(const GeneratorConfig& config)
 	this->rootNode->tangentPoint = config.initialTangentPoint;
 
 	this->GenerateRecursive(config, this->rootNode, 0);
+
+	this->GenerateSurfacePoints(config.surfacePointConfig, [this](const SurfacePoint& surfacePoint) -> void
+		{
+			this->surfacePointArray.push_back(surfacePoint);
+
+			auto node = new HappyMath::Graph::Node();
+			node->SetVertex(surfacePoint.location);
+			node->SetNormal(surfacePoint.normal);
+			this->graph.AddNode(node);
+		});
+
+	if (progressReporter)
+		progressReporter->BeginTask("Generating graph edges...");
+
+	this->graph.AutoCompleteEdges(config.autoCompleteEdgesConfig.localityRadius, config.autoCompleteEdgesConfig.maxDegree, [progressReporter](double progress) -> void
+		{
+			if (progressReporter)
+				progressReporter->TaskUpdate(progress);
+		});
+
+	if (progressReporter)
+		progressReporter->EndTask();
+
+	this->graph.GenerateEdgeSet(this->edgeSet);
+
+	if (progressReporter)
+		progressReporter->BeginTask("Generating polygon mesh...");
+
+	this->graph.ToPolygonMesh(this->mesh, [progressReporter](double progress) -> void
+		{
+			if (progressReporter)
+				progressReporter->TaskUpdate(progress);
+		});
+
+	if (progressReporter)
+		progressReporter->EndTask();
+
+	// STPTODO: Now assign polygons to nodes for accelerated rendering.  Generate UVs and normals while we're at it.
 
 	return true;
 }
@@ -204,38 +246,23 @@ void WormholeTree::ForEachNode(std::function<void(const Node*)> nodeFunc) const
 	}
 }
 
-void WormholeTree::PopulateGraphWithSurfacePoints(HappyMath::Graph& graph) const
+void WormholeTree::GenerateSurfacePoints(const SurfacePointGeneratorConfig& config, std::function<void(const SurfacePoint&)> pointFunc) const
 {
-	this->GenerateSurfacePoints([&graph](const SurfacePoint& surfacePoint) -> void
+	this->ForEachNode([this, config, pointFunc](const Node* node) -> void
 		{
-			auto node = new HappyMath::Graph::Node();
-			node->SetVertex(surfacePoint.location);
-			node->SetNormal(surfacePoint.normal);
-			graph.AddNode(node);
+			this->GenerateSurfacePointsForNode(node, config, pointFunc);
 		});
 }
 
-void WormholeTree::GenerateSurfacePoints(std::function<void(const SurfacePoint&)> pointFunc) const
+void WormholeTree::GenerateSurfacePointsForNode(const Node* node, const SurfacePointGeneratorConfig& config, std::function<void(const SurfacePoint&)> pointFunc) const
 {
-	this->ForEachNode([this, pointFunc](const Node* node) -> void
-		{
-			this->GenerateSurfacePointsForNode(node, pointFunc);
-		});
-}
-
-void WormholeTree::GenerateSurfacePointsForNode(const Node* node, std::function<void(const SurfacePoint&)> pointFunc) const
-{
-	int samplesPerLocation = 32;
-	int numSteps = 32;
-	double wormholeRadius = 0.25;
-	
 	for (int i = 0; i < (int)node->childNodeArray.size(); i++)
 	{
 		const Node* childNodeA = node->childNodeArray[i].get();
 
-		for (int j = 0; j < numSteps; j++)
+		for (int j = 0; j < config.numSteps; j++)
 		{
-			double curveParameter = double(j) / double(numSteps - 1);
+			double curveParameter = double(j) / double(config.numSteps);
 
 			HappyMath::Vector3 curvePoint;
 			EvaluateCubicBezierCurve(node->tangentPoint, childNodeA->tangentPoint, curveParameter, curvePoint);
@@ -249,12 +276,12 @@ void WormholeTree::GenerateSurfacePointsForNode(const Node* node, std::function<
 			xAxis.Normalize();
 			yAxis = zAxis.Cross(xAxis);
 
-			for (int k = 0; k < samplesPerLocation; k++)
+			for (int k = 0; k < config.samplesPerLocation; k++)
 			{
-				double angle = (double(k) / double(samplesPerLocation)) * 2.0 * M_PI;
+				double angle = (double(k) / double(config.samplesPerLocation)) * 2.0 * M_PI;
 
 				SurfacePoint surfacePoint;
-				surfacePoint.location = curvePoint + wormholeRadius * (xAxis * ::cos(angle) + yAxis * ::sin(angle));
+				surfacePoint.location = curvePoint + config.wormholeRadius * (xAxis * ::cos(angle) + yAxis * ::sin(angle));
 				surfacePoint.normal = (surfacePoint.location - curvePoint).Normalized();
 
 				bool cullPoint = false;
@@ -270,7 +297,7 @@ void WormholeTree::GenerateSurfacePointsForNode(const Node* node, std::function<
 					FindClosestPointOnCubicBezierCurve(node->tangentPoint, childNodeB->tangentPoint, surfacePoint.location, closestPoint);
 
 					double squareDistance = (closestPoint - surfacePoint.location).SquareLength();
-					if (squareDistance < wormholeRadius * wormholeRadius)
+					if (squareDistance < config.wormholeRadius * config.wormholeRadius)
 					{
 						cullPoint = true;
 						break;
@@ -299,6 +326,23 @@ WormholeTree::GeneratorConfig::GeneratorConfig()
 	this->maxBranchFactor = 2;
 	this->minDistBetweenNodes = 10.0;
 	this->maxDistBetweenNodes = 15.0;
+}
+
+//--------------------------------- WormholeTree::SurfacePointGeneratorConfig ---------------------------------
+
+WormholeTree::SurfacePointGeneratorConfig::SurfacePointGeneratorConfig()
+{
+	this->samplesPerLocation = 32;
+	this->numSteps = 32;
+	this->wormholeRadius = 0.25;
+}
+
+//--------------------------------- WormholeTree::AutoCompleteEdgesConfig ---------------------------------
+
+WormholeTree::AutoCompleteEdgesConfig::AutoCompleteEdgesConfig()
+{
+	this->localityRadius = 0.3;
+	this->maxDegree = 8;
 }
 
 //--------------------------------- WormholeTree::Node ---------------------------------

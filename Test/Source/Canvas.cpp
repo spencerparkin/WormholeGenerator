@@ -85,53 +85,61 @@ void Canvas::OnPaint(wxPaintEvent& event)
 
 	glPointSize(3.0);
 
-	glBegin(GL_POINTS);
-	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-
-	wxGetApp().wormholeTree.ForEachNode([](const WormholeGenerator::WormholeTree::Node* node) -> void
-		{
-			const HappyMath::Vector3& point = node->tangentPoint.location;
-			glVertex3d(point.x, point.y, point.z);
-		});
-
-	glEnd();
-
-	glBegin(GL_LINES);
-	glColor4f(0.5f, 0.5f, 0.5f, 1.0f);
-
-	if (this->lineSegmentArray.size() == 0)
+	if ((wxGetApp().drawFlags & DF_NODE_POINTS) != 0)
 	{
-		wxGetApp().wormholeTree.ForEachRenderLine(16 /* linesPerCurve */, [this](const HappyMath::LineSegment& line) -> void
+		glBegin(GL_POINTS);
+		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+
+		wxGetApp().wormholeTree.ForEachNode([](const WormholeGenerator::WormholeTree::Node* node) -> void
 			{
-				this->lineSegmentArray.push_back(line);
+				const HappyMath::Vector3& point = node->tangentPoint.location;
+				glVertex3d(point.x, point.y, point.z);
 			});
+
+		glEnd();
 	}
 
-	for (const HappyMath::LineSegment& line : this->lineSegmentArray)
+	if ((wxGetApp().drawFlags & DF_SPLINES) != 0)
 	{
-		glVertex3d(line.point[0].x, line.point[0].y, line.point[0].z);
-		glVertex3d(line.point[1].x, line.point[1].y, line.point[1].z);
+		glBegin(GL_LINES);
+		glColor4f(0.5f, 0.5f, 0.5f, 1.0f);
+
+		if (this->lineSegmentArray.size() == 0)
+		{
+			wxGetApp().wormholeTree.ForEachRenderLine(16 /* linesPerCurve */, [this](const HappyMath::LineSegment& line) -> void
+				{
+					this->lineSegmentArray.push_back(line);
+				});
+		}
+
+		for (const HappyMath::LineSegment& line : this->lineSegmentArray)
+		{
+			glVertex3d(line.point[0].x, line.point[0].y, line.point[0].z);
+			glVertex3d(line.point[1].x, line.point[1].y, line.point[1].z);
+		}
+
+		glEnd();
 	}
 
-	glEnd();
-
-	if (wxGetApp().surfacePointArray.size() > 0)
+	if ((wxGetApp().drawFlags & DF_SURFACE_POINTS) != 0)
 	{
 		glBegin(GL_POINTS);
 		glColor4f(1.0f, 0.0f, 0.0f, 1.0f);
 
-		for (const WormholeGenerator::SurfacePoint& surfacePoint : wxGetApp().surfacePointArray)
+		for (const WormholeGenerator::SurfacePoint& surfacePoint : wxGetApp().wormholeTree.GetSurfacePointArray())
 		{
 			glVertex3d(surfacePoint.location.x, surfacePoint.location.y, surfacePoint.location.z);
 		}
 
 		glEnd();
-		
-		/*
+	}
+
+	if ((wxGetApp().drawFlags & DF_SURFACE_POINT_NORMALS) != 0)
+	{
 		glBegin(GL_LINES);
 		glColor4f(0.0f, 1.0f, 0.0f, 1.0f);
 
-		for (const WormholeGenerator::SurfacePoint& surfacePoint : wxGetApp().surfacePointArray)
+		for (const WormholeGenerator::SurfacePoint& surfacePoint : wxGetApp().wormholeTree.GetSurfacePointArray())
 		{
 			glVertex3d(surfacePoint.location.x, surfacePoint.location.y, surfacePoint.location.z);
 
@@ -140,18 +148,17 @@ void Canvas::OnPaint(wxPaintEvent& event)
 		}
 
 		glEnd();
-		*/
 	}
 
-	if (wxGetApp().edgeSet.size() > 0)
+	if ((wxGetApp().drawFlags & DF_SURFACE_EDGES) != 0)
 	{
 		glBegin(GL_LINES);
 		glColor4f(0.5f, 0.5f, 1.0f, 1.0f);
 
-		for (auto edge : wxGetApp().edgeSet)
+		for (auto edge : wxGetApp().wormholeTree.GetEdgeSet())
 		{
-			const HappyMath::Graph::Node* nodeA = wxGetApp().graph.GetNode(edge.i);
-			const HappyMath::Graph::Node* nodeB = wxGetApp().graph.GetNode(edge.j);
+			const HappyMath::Graph::Node* nodeA = wxGetApp().wormholeTree.GetGraph().GetNode(edge.i);
+			const HappyMath::Graph::Node* nodeB = wxGetApp().wormholeTree.GetGraph().GetNode(edge.j);
 
 			const HappyMath::Vector3& vertexA = nodeA->GetVertex();
 			const HappyMath::Vector3& vertexB = nodeB->GetVertex();
@@ -163,26 +170,30 @@ void Canvas::OnPaint(wxPaintEvent& event)
 		glEnd();
 	}
 
-	for (int i = 0; i < wxGetApp().mesh.GetNumPolygons(); i++)
+	if ((wxGetApp().drawFlags & DF_SURFACE_POLYGONS) != 0)
 	{
-		const HappyMath::PolygonMesh::Polygon& polygon = wxGetApp().mesh.GetPolygon(i);
-
-		glBegin(GL_POLYGON);
-
-		double r = wxGetApp().random.InRange(0.0, 1.0);
-		double g = wxGetApp().random.InRange(0.0, 1.0);
-		double b = wxGetApp().random.InRange(0.0, 1.0);
-
-		glColor3d(r, g, b);
-
-		for (int j = 0; j < (int)polygon.vertexArray.size(); j++)
+		for (int i = 0; i < wxGetApp().wormholeTree.GetMesh().GetNumPolygons(); i++)
 		{
-			const HappyMath::Vector3& vertex = wxGetApp().mesh.GetVertex(polygon.vertexArray[j]);
+			const HappyMath::PolygonMesh::Polygon& polygon = wxGetApp().wormholeTree.GetMesh().GetPolygon(i);
 
-			glVertex3d(vertex.x, vertex.y, vertex.z);
+			glBegin(GL_POLYGON);
+
+			// STPTODO: This coloring is stupid, but just something to get me by for now.
+			double r = (i % 2 == 0) ? 0.5 : 0.2;
+			double g = (i % 2 == 0) ? 0.1 : 0.8;
+			double b = (i % 2 == 0) ? 0.2 : 0.7;
+
+			glColor3d(r, g, b);
+
+			for (int j = 0; j < (int)polygon.vertexArray.size(); j++)
+			{
+				const HappyMath::Vector3& vertex = wxGetApp().wormholeTree.GetMesh().GetVertex(polygon.vertexArray[j]);
+
+				glVertex3d(vertex.x, vertex.y, vertex.z);
+			}
+
+			glEnd();
 		}
-
-		glEnd();
 	}
 
 	glFlush();

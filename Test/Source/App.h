@@ -18,11 +18,12 @@ public:
 	virtual int OnExit() override;
 
 	WormholeGenerator::WormholeTree wormholeTree;
-	std::vector<WormholeGenerator::SurfacePoint> surfacePointArray;
-	HappyMath::Graph graph;
-	std::set<HappyMath::Graph::UnorderedEdge, HappyMath::Graph::UnorderedEdge> edgeSet;
-	HappyMath::PolygonMesh mesh;
+	
 	HappyMath::Random random;
+
+	int drawFlags;
+
+	Frame* GetFrame() { return this->frame; }
 
 private:
 	Frame* frame;

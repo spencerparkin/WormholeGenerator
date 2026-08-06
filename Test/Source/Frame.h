@@ -13,6 +13,8 @@ public:
 private:
 	void OnExit(wxCommandEvent& event);
 	void OnGenerate(wxCommandEvent& event);
+	void OnToggleDrawFlag(wxCommandEvent& event);
+	void OnUpdateUI(wxUpdateUIEvent& event);
 
 	Canvas* canvas;
 };
