@@ -76,6 +76,11 @@ void Frame::OnGenerate(wxCommandEvent& event)
 	config.minDistBetweenNodes = 1.0;
 	config.maxDistBetweenNodes = 2.0;
 	config.maxBranchFactor = 2;
+	config.autoCompleteEdgesConfig.localityRadius = 0.3;
+	config.autoCompleteEdgesConfig.maxDegree = 8;
+	config.surfacePointConfig.samplesPerLocation = 16;
+	config.surfacePointConfig.numSteps = 32;
+	config.surfacePointConfig.wormholeRadius = 0.2;
 
 	class ProgressReporter : public WormholeGenerator::WormholeTree::ProgressReporterInterface
 	{
