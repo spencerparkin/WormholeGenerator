@@ -31,9 +31,16 @@ int main(int argc, char** argv)
     WormholeGenerator::WormholeRenderer wormholeRenderer;
     if (wormholeRenderer.LoadWormholeData("D:/Misc/Test/test.wormhole"))
     {
+        Uint64 lastCount = SDL_GetPerformanceCounter();
+
         bool keepRunning = true;
         while (keepRunning)
         {
+            Uint64 currentCount = SDL_GetPerformanceCounter();
+
+            double deltaTime = static_cast<double>(currentCount - lastCount) / static_cast<double>(SDL_GetPerformanceFrequency());
+            lastCount = currentCount;
+
             SDL_Event event;
 
             while (SDL_PollEvent(&event))
@@ -58,7 +65,10 @@ int main(int argc, char** argv)
             glViewport(0, 0, 1920, 1080);
 
             glClearColor(0.2f, 0.4f, 0.8f, 1.0f);
-            glClear(GL_COLOR_BUFFER_BIT);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            wormholeRenderer.Advance(deltaTime);
+            wormholeRenderer.Render();
 
             SDL_GL_SwapWindow(window);
         }

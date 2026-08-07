@@ -53,10 +53,12 @@ bool WormholeRenderer::LoadWormholeData(const std::string& filePath)
 
 void WormholeRenderer::Render()
 {
+	// STPTODO: Based on where our view is, render only those nodes we need to, not all of them.
 }
 
 void WormholeRenderer::Advance(double deltaTime)
 {
+	// STPTODO: Here we just move our view through the wormhole.
 }
 
 void WormholeRenderer::SetSpeed(double speed)
