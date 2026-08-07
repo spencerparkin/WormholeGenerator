@@ -186,18 +186,12 @@ void Canvas::OnPaint(wxPaintEvent& event)
 
 				glColor3d(r, g, b);
 
-				for (int i : node->polygonArray)
+				for (uint32_t index : node->indexBuffer)
 				{
-					const HappyMath::PolygonMesh::Polygon& polygon = wxGetApp().wormholeTree.GetMesh().GetPolygon(i);
-					if (polygon.vertexArray.size() != 3)
-						continue;
+					const WormholeGenerator::WormholeTree::RenderVertex& vertex = node->vertexBuffer[index];
 					
-					for (int j = 0; j < (int)polygon.vertexArray.size(); j++)
-					{
-						const HappyMath::Vector3& vertex = wxGetApp().wormholeTree.GetMesh().GetVertex(polygon.vertexArray[j]);
-
-						glVertex3d(vertex.x, vertex.y, vertex.z);
-					}
+					glNormal3d(vertex.normal.x, vertex.normal.y, vertex.normal.z);
+					glVertex3d(vertex.location.x, vertex.location.y, vertex.location.z);
 				}
 			});
 

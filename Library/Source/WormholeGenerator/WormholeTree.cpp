@@ -2,6 +2,7 @@
 #include "HappyMath/Ray.h"
 #include <unordered_set>
 #include <math.h>
+#include <format>
 
 using namespace WormholeGenerator;
 
@@ -341,8 +342,10 @@ void WormholeTree::BucketSortPolygons()
 				}
 			});
 
-		if (closestNode)
-			closestNode->polygonArray.push_back(i);
+		if (!closestNode)
+			continue;
+
+		closestNode->AddPolygon(standardPolygon);
 	}
 }
 
@@ -362,13 +365,11 @@ bool WormholeTree::SaveToDisk(const std::string& filePath) const
 	if (!this->rootNode->SaveToStream(fileStream))
 		return false;
 
-	this->mesh.Dump(fileStream);
-
 	fileStream.close();
 	return true;
 }
 
-bool WormholeTree::LoadFromDisk(const std::string& filePath)
+bool WormholeTree::LoadFromDisk(const std::string& filePath, std::function<std::shared_ptr<Node>()> nodeMakerFunc /*= []() { return std::make_shared<Node>(); }*/)
 {
 	this->Clear();
 
@@ -377,11 +378,9 @@ bool WormholeTree::LoadFromDisk(const std::string& filePath)
 	if (!fileStream.is_open())
 		return false;
 
-	this->rootNode = std::make_shared<Node>();
-	if (!this->rootNode->LoadFromStream(fileStream))
+	this->rootNode = nodeMakerFunc();
+	if (!this->rootNode->LoadFromStream(fileStream, nodeMakerFunc))
 		return false;
-
-	this->mesh.Restore(fileStream);
 
 	fileStream.close();
 	return true;
@@ -429,16 +428,58 @@ WormholeTree::Node::Node()
 {
 }
 
+void WormholeTree::Node::AddPolygon(const HappyMath::Polygon& polygon)
+{
+	HappyMath::Plane plane = polygon.CalcPlane(true);
+
+	for (int j = 0; j < (int)polygon.vertexArray.size(); j++)
+	{
+		RenderVertex vertex;
+		vertex.location = polygon.vertexArray[j];
+		vertex.normal = plane.unitNormal;
+
+		// This is actually really stupid, because I don't think we'll be re-using any vertex.
+		// But I'm going to keep the index/vertex buffer combo, because maybe we can optimize this later.
+		std::string key = std::format("{}_{}_{}_{}_{}_{}",
+			vertex.location.x, vertex.location.y, vertex.location.z,
+			vertex.normal.x, vertex.normal.y, vertex.normal.z);
+
+		auto pair = indexBufferMap.find(key);
+		if (pair != indexBufferMap.end())
+		{
+			int index = pair->second;
+			indexBuffer.push_back(index);
+		}
+		else
+		{
+			int index = (int)vertexBuffer.size();
+			indexBuffer.push_back(index);
+			vertexBuffer.push_back(vertex);
+			indexBufferMap.insert(std::pair(key, index));
+		}
+	}
+}
+
 bool WormholeTree::Node::SaveToStream(std::ostream& outputStream) const
 {
 	this->tangentPoint.location.Dump(outputStream);
 	this->tangentPoint.unitDirection.Dump(outputStream);
 
-	int size = (int)polygonArray.size();
+	int size = (int)this->indexBuffer.size();
 	outputStream.write((char*)&size, sizeof(size));
 	
 	for (int i = 0; i < size; i++)
-		outputStream.write((char*)&polygonArray[i], sizeof(int));
+		outputStream.write((char*)&this->indexBuffer[i], sizeof(uint32_t));
+
+	size = (int)this->vertexBuffer.size();
+	outputStream.write((char*)&size, sizeof(size));
+
+	for (int i = 0; i < size; i++)
+	{
+		const RenderVertex& vertex = this->vertexBuffer[i];
+		vertex.location.Dump(outputStream);
+		vertex.normal.Dump(outputStream);
+	}
 
 	size = (int)childNodeArray.size();
 	outputStream.write((char*)&size, sizeof(size));
@@ -450,7 +491,7 @@ bool WormholeTree::Node::SaveToStream(std::ostream& outputStream) const
 	return true;
 }
 
-bool WormholeTree::Node::LoadFromStream(std::istream& inputStream)
+bool WormholeTree::Node::LoadFromStream(std::istream& inputStream, std::function<std::shared_ptr<Node>()> nodeMakerFunc)
 {
 	this->tangentPoint.location.Restore(inputStream);
 	this->tangentPoint.unitDirection.Restore(inputStream);
@@ -460,17 +501,27 @@ bool WormholeTree::Node::LoadFromStream(std::istream& inputStream)
 
 	for (int i = 0; i < size; i++)
 	{
-		int polygon = -1;
-		inputStream.read((char*)&polygon, sizeof(int));
-		this->polygonArray.push_back(polygon);
+		uint32_t index = 0;
+		inputStream.read((char*)&index, sizeof(int));
+		this->indexBuffer.push_back(index);
 	}
 
 	inputStream.read((char*)&size, sizeof(size));
 
 	for (int i = 0; i < size; i++)
 	{
-		auto childNode = std::make_shared<Node>();
-		if (!childNode->LoadFromStream(inputStream))
+		RenderVertex renderVertex;
+		renderVertex.location.Restore(inputStream);
+		renderVertex.normal.Restore(inputStream);
+		this->vertexBuffer.push_back(renderVertex);
+	}
+
+	inputStream.read((char*)&size, sizeof(size));
+
+	for (int i = 0; i < size; i++)
+	{
+		auto childNode = nodeMakerFunc();
+		if (!childNode->LoadFromStream(inputStream, nodeMakerFunc))
 			return false;
 
 		this->childNodeArray.push_back(childNode);

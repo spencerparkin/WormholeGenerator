@@ -77,6 +77,12 @@ namespace WormholeGenerator
 			AutoCompleteEdgesConfig autoCompleteEdgesConfig;
 		};
 
+		struct RenderVertex
+		{
+			HappyMath::Vector3 location;
+			HappyMath::Vector3 normal;
+		};
+
 		class Node : public std::enable_shared_from_this<Node>
 		{
 		public:
@@ -84,11 +90,15 @@ namespace WormholeGenerator
 			virtual ~Node();
 
 			bool SaveToStream(std::ostream& outputStream) const;
-			bool LoadFromStream(std::istream& inputStream);
+			bool LoadFromStream(std::istream& inputStream, std::function<std::shared_ptr<Node>()> nodeMakerFunc);
+
+			void AddPolygon(const HappyMath::Polygon& polygon);
 
 			TangentPoint tangentPoint;
 			std::vector<std::shared_ptr<Node>> childNodeArray;
-			std::vector<int> polygonArray;
+			std::vector<RenderVertex> vertexBuffer;
+			std::vector<uint32_t> indexBuffer;
+			std::unordered_map<std::string, uint32_t> indexBufferMap;
 		};
 
 		class ProgressReporterInterface
@@ -107,9 +117,9 @@ namespace WormholeGenerator
 		void ForEachRenderLine(int linesPerCurve, std::function<void(const HappyMath::LineSegment&)> renderFunc) const;
 		void ForEachNode(std::function<void(const Node*)> nodeFunc) const;
 		bool SaveToDisk(const std::string& filePath) const;
-		bool LoadFromDisk(const std::string& filePath);
+		bool LoadFromDisk(const std::string& filePath, std::function<std::shared_ptr<Node>()> nodeMakerFunc = []() { return std::make_shared<WormholeTree::Node>(); });
 
-		const Node* GetRootNode() { return this->rootNode.get(); }
+		Node* GetRootNode() { return this->rootNode.get(); }
 		const std::vector<WormholeGenerator::SurfacePoint>& GetSurfacePointArray() const { return this->surfacePointArray; }
 		const HappyMath::Graph& GetGraph() const { return this->graph; }
 		const std::set<HappyMath::Graph::UnorderedEdge, HappyMath::Graph::UnorderedEdge>& GetEdgeSet() const { return this->edgeSet; }
