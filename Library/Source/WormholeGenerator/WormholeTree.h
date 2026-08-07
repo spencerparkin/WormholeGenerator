@@ -9,6 +9,7 @@
 #include <memory>
 #include <vector>
 #include <functional>
+#include <fstream>
 
 namespace WormholeGenerator
 {
@@ -82,10 +83,12 @@ namespace WormholeGenerator
 			Node();
 			virtual ~Node();
 
+			bool SaveToStream(std::ostream& outputStream) const;
+			bool LoadFromStream(std::istream& inputStream);
+
 			TangentPoint tangentPoint;
 			std::vector<std::shared_ptr<Node>> childNodeArray;
-
-			// STPTODO: Add array of polygon indices associated with the node.  This way, the renderer need only render this node and the next rather than everything all the time.
+			std::vector<int> polygonArray;
 		};
 
 		class ProgressReporterInterface
@@ -103,9 +106,10 @@ namespace WormholeGenerator
 		bool Generate(const GeneratorConfig& config, ProgressReporterInterface* progressReporter = nullptr);
 		void ForEachRenderLine(int linesPerCurve, std::function<void(const HappyMath::LineSegment&)> renderFunc) const;
 		void ForEachNode(std::function<void(const Node*)> nodeFunc) const;
-		
-		// STPTODO: Need a way to serialize everything in/out from/to disk.
+		bool SaveToDisk(const std::string& filePath) const;
+		bool LoadFromDisk(const std::string& filePath);
 
+		const Node* GetRootNode() { return this->rootNode.get(); }
 		const std::vector<WormholeGenerator::SurfacePoint>& GetSurfacePointArray() const { return this->surfacePointArray; }
 		const HappyMath::Graph& GetGraph() const { return this->graph; }
 		const std::set<HappyMath::Graph::UnorderedEdge, HappyMath::Graph::UnorderedEdge>& GetEdgeSet() const { return this->edgeSet; }
@@ -116,7 +120,8 @@ namespace WormholeGenerator
 		void GenerateSurfacePoints(const SurfacePointGeneratorConfig& config, std::function<void(const SurfacePoint&)> pointFunc) const;
 		void GenerateRecursive(const GeneratorConfig& config, std::shared_ptr<Node> parentNode, int currentDepth);
 		void GenerateSurfacePointsForNode(const Node* node, const SurfacePointGeneratorConfig& config, std::function<void(const SurfacePoint&)> pointFunc) const;
-		
+		void BucketSortPolygons();
+
 		static void EvaluateCubicBezierCurve(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, HappyMath::Vector3& curvePoint);
 		static void EvaluateCubicBezierCurveDerivative(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, HappyMath::Vector3& curveDerivative);
 		static void EvaluateCubicBezierCurveSecondDerivative(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, HappyMath::Vector3& secondCurveDerivative);

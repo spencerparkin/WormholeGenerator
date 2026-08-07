@@ -72,7 +72,7 @@ bool WormholeTree::Generate(const GeneratorConfig& config, ProgressReporterInter
 	if (progressReporter)
 		progressReporter->EndTask();
 
-	// STPTODO: Now assign polygons to nodes for accelerated rendering.  Generate UVs and normals while we're at it.
+	this->BucketSortPolygons();
 
 	return true;
 }
@@ -313,6 +313,80 @@ void WormholeTree::GenerateSurfacePointsForNode(const Node* node, const SurfaceP
 	}
 }
 
+void WormholeTree::BucketSortPolygons()
+{
+	for (int i = 0; i < (int)this->mesh.GetPolygonArray().size(); i++)
+	{
+		const HappyMath::PolygonMesh::Polygon& polygon = this->mesh.GetPolygon(i);
+		
+		// Skip anything that isn't a triangle for now.
+		if (polygon.vertexArray.size() != 3)
+			continue;
+
+		HappyMath::Polygon standardPolygon;
+		polygon.ToStandalonePolygon(standardPolygon, &this->mesh);
+
+		HappyMath::Vector3 center = standardPolygon.CalcCenter();
+
+		Node* closestNode = nullptr;
+		double smallesteSquraeDistance = std::numeric_limits<double>::max();
+
+		this->ForEachNode([&center, &closestNode, &smallesteSquraeDistance](const Node* node) -> void
+			{
+				double squareDistance = (node->tangentPoint.location - center).SquareLength();
+				if (squareDistance < smallesteSquraeDistance)
+				{
+					smallesteSquraeDistance = squareDistance;
+					closestNode = const_cast<Node*>(node);
+				}
+			});
+
+		if (closestNode)
+			closestNode->polygonArray.push_back(i);
+	}
+}
+
+bool WormholeTree::SaveToDisk(const std::string& filePath) const
+{
+	if (!this->rootNode.get())
+		return false;
+
+	if (this->mesh.GetNumPolygons() == 0)
+		return false;
+
+	std::ofstream fileStream;
+	fileStream.open(filePath, std::ios::out | std::ios::binary);
+	if (!fileStream.is_open())
+		return false;
+
+	if (!this->rootNode->SaveToStream(fileStream))
+		return false;
+
+	this->mesh.Dump(fileStream);
+
+	fileStream.close();
+	return true;
+}
+
+bool WormholeTree::LoadFromDisk(const std::string& filePath)
+{
+	this->Clear();
+
+	std::ifstream fileStream;
+	fileStream.open(filePath, std::ios::in | std::ios::binary);
+	if (!fileStream.is_open())
+		return false;
+
+	this->rootNode = std::make_shared<Node>();
+	if (!this->rootNode->LoadFromStream(fileStream))
+		return false;
+
+	this->mesh.Restore(fileStream);
+
+	fileStream.close();
+	return true;
+}
+
 //--------------------------------- WormholeTree::GeneratorConfig ---------------------------------
 
 WormholeTree::GeneratorConfig::GeneratorConfig()
@@ -353,4 +427,54 @@ WormholeTree::Node::Node()
 
 /*virtual*/ WormholeTree::Node::~Node()
 {
+}
+
+bool WormholeTree::Node::SaveToStream(std::ostream& outputStream) const
+{
+	this->tangentPoint.location.Dump(outputStream);
+	this->tangentPoint.unitDirection.Dump(outputStream);
+
+	int size = (int)polygonArray.size();
+	outputStream.write((char*)&size, sizeof(size));
+	
+	for (int i = 0; i < size; i++)
+		outputStream.write((char*)&polygonArray[i], sizeof(int));
+
+	size = (int)childNodeArray.size();
+	outputStream.write((char*)&size, sizeof(size));
+
+	for (const std::shared_ptr<Node> childNode : this->childNodeArray)
+		if (!childNode->SaveToStream(outputStream))
+			return false;
+	
+	return true;
+}
+
+bool WormholeTree::Node::LoadFromStream(std::istream& inputStream)
+{
+	this->tangentPoint.location.Restore(inputStream);
+	this->tangentPoint.unitDirection.Restore(inputStream);
+
+	int size = 0;
+	inputStream.read((char*)&size, sizeof(size));
+
+	for (int i = 0; i < size; i++)
+	{
+		int polygon = -1;
+		inputStream.read((char*)&polygon, sizeof(int));
+		this->polygonArray.push_back(polygon);
+	}
+
+	inputStream.read((char*)&size, sizeof(size));
+
+	for (int i = 0; i < size; i++)
+	{
+		auto childNode = std::make_shared<Node>();
+		if (!childNode->LoadFromStream(inputStream))
+			return false;
+
+		this->childNodeArray.push_back(childNode);
+	}
+
+	return true;
 }

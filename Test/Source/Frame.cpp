@@ -6,11 +6,16 @@
 #include <wx/sizer.h>
 #include <wx/msgdlg.h>
 #include <wx/progdlg.h>
+#include <wx/filedlg.h>
 
 Frame::Frame() : wxFrame(nullptr, wxID_ANY, "Wormhole Generator Test App", wxDefaultPosition, wxSize(1500, 1200))
 {
 	wxMenu* programMenu = new wxMenu();
 	programMenu->Append(new wxMenuItem(programMenu, ID_Generate, "Generate Wormhole Tree", "Generate a wormhole tree."));
+	programMenu->Append(new wxMenuItem(programMenu, ID_Clear, "Clear Wormhole Tree", "Clear wormhole data in memory."));
+	programMenu->AppendSeparator();
+	programMenu->Append(new wxMenuItem(programMenu, ID_Save, "Save Wormhole Tree", "Save wormhole data to disk."));
+	programMenu->Append(new wxMenuItem(programMenu, ID_Load, "Load Wormhole Tree", "Load wormhole data from disk."));
 	programMenu->AppendSeparator();
 	programMenu->Append(new wxMenuItem(programMenu, ID_Exit, "Exit", "Go do something else with your life."));
 
@@ -43,12 +48,18 @@ Frame::Frame() : wxFrame(nullptr, wxID_ANY, "Wormhole Generator Test App", wxDef
 	this->Bind(wxEVT_MENU, &Frame::OnToggleDrawFlag, this, ID_DRAW_SURFACE_EDGES);
 	this->Bind(wxEVT_MENU, &Frame::OnToggleDrawFlag, this, ID_DRAW_SURFACE_POLYGONS);
 	this->Bind(wxEVT_MENU, &Frame::OnToggleDrawFlag, this, ID_DRAW_NODE_POINTS);
+	this->Bind(wxEVT_MENU, &Frame::OnSave, this, ID_Save);
+	this->Bind(wxEVT_MENU, &Frame::OnLoad, this, ID_Load);
+	this->Bind(wxEVT_MENU, &Frame::OnClear, this, ID_Clear);
 	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_DRAW_SPLINES);
 	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_DRAW_SURFACE_POINTS);
 	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_DRAW_SURFACE_POINT_NORMALS);
 	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_DRAW_SURFACE_EDGES);
 	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_DRAW_SURFACE_POLYGONS);
 	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_DRAW_NODE_POINTS);
+	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_Save);
+	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_Load);
+	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_Clear);
 }
 
 /*virtual*/ Frame::~Frame()
@@ -58,6 +69,41 @@ Frame::Frame() : wxFrame(nullptr, wxID_ANY, "Wormhole Generator Test App", wxDef
 void Frame::OnExit(wxCommandEvent& event)
 {
 	this->Close(true);
+}
+
+void Frame::OnClear(wxCommandEvent& event)
+{
+	wxGetApp().wormholeTree.Clear();
+
+	this->canvas->ClearCache();
+}
+
+void Frame::OnSave(wxCommandEvent& event)
+{
+	wxFileDialog fileDialog(this, "Save wormhole data to where?", wxEmptyString, wxEmptyString, "Wormhole Files (*.wormhole)|*.wormhole", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+	if (fileDialog.ShowModal() != wxID_OK)
+		return;
+
+	std::string filePath = fileDialog.GetPath().ToStdString();
+
+	if (!wxGetApp().wormholeTree.SaveToDisk(filePath))
+	{
+		wxMessageBox("Failed to save!", "Error!", wxICON_ERROR | wxOK, this);
+	}
+}
+
+void Frame::OnLoad(wxCommandEvent& event)
+{
+	wxFileDialog fileDialog(this, "Load wormhole data from where?", wxEmptyString, wxEmptyString, "Wormhole Files (*.wormhole)|*.wormhole", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+	if (fileDialog.ShowModal() != wxID_OK)
+		return;
+
+	std::string filePath = fileDialog.GetPath().ToStdString();
+
+	if (!wxGetApp().wormholeTree.LoadFromDisk(filePath))
+	{
+		wxMessageBox("Failed to load!", "Error!", wxICON_ERROR | wxOK, this);
+	}
 }
 
 void Frame::OnGenerate(wxCommandEvent& event)
@@ -176,6 +222,15 @@ void Frame::OnUpdateUI(wxUpdateUIEvent& event)
 		break;
 	case ID_DRAW_NODE_POINTS:
 		event.Check((wxGetApp().drawFlags & DF_NODE_POINTS) != 0);
+		break;
+	case ID_Save:
+		event.Enable(wxGetApp().wormholeTree.GetMesh().GetNumPolygons() > 0);
+		break;
+	case ID_Load:
+		event.Enable(true);
+		break;
+	case ID_Clear:
+		event.Enable(wxGetApp().wormholeTree.GetRootNode() != nullptr);
 		break;
 	}
 }

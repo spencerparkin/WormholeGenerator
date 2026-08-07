@@ -14,6 +14,8 @@ public:
 	Canvas(wxWindow* parent);
 	virtual ~Canvas();
 
+	void ClearCache();
+
 private:
 	void OnPaint(wxPaintEvent& event);
 	void OnResize(wxSizeEvent& event);

@@ -172,33 +172,46 @@ void Canvas::OnPaint(wxPaintEvent& event)
 
 	if ((wxGetApp().drawFlags & DF_SURFACE_POLYGONS) != 0)
 	{
-		for (int i = 0; i < wxGetApp().wormholeTree.GetMesh().GetNumPolygons(); i++)
-		{
-			const HappyMath::PolygonMesh::Polygon& polygon = wxGetApp().wormholeTree.GetMesh().GetPolygon(i);
+		glBegin(GL_TRIANGLES);
 
-			glBegin(GL_POLYGON);
+		double r = 0.1;
+		double g = 0.2;
+		double b = 0.3;
 
-			// STPTODO: This coloring is stupid, but just something to get me by for now.
-			double r = (i % 2 == 0) ? 0.5 : 0.2;
-			double g = (i % 2 == 0) ? 0.1 : 0.8;
-			double b = (i % 2 == 0) ? 0.2 : 0.7;
-
-			glColor3d(r, g, b);
-
-			for (int j = 0; j < (int)polygon.vertexArray.size(); j++)
+		wxGetApp().wormholeTree.ForEachNode([&r, &g, &b](const WormholeGenerator::WormholeTree::Node* node) -> void
 			{
-				const HappyMath::Vector3& vertex = wxGetApp().wormholeTree.GetMesh().GetVertex(polygon.vertexArray[j]);
+				r = ::fmod(r + 0.53, 1.0);
+				g = ::fmod(g + 0.87, 1.0);
+				b = ::fmod(b + 0.62, 1.0);
 
-				glVertex3d(vertex.x, vertex.y, vertex.z);
-			}
+				glColor3d(r, g, b);
 
-			glEnd();
-		}
+				for (int i : node->polygonArray)
+				{
+					const HappyMath::PolygonMesh::Polygon& polygon = wxGetApp().wormholeTree.GetMesh().GetPolygon(i);
+					if (polygon.vertexArray.size() != 3)
+						continue;
+					
+					for (int j = 0; j < (int)polygon.vertexArray.size(); j++)
+					{
+						const HappyMath::Vector3& vertex = wxGetApp().wormholeTree.GetMesh().GetVertex(polygon.vertexArray[j]);
+
+						glVertex3d(vertex.x, vertex.y, vertex.z);
+					}
+				}
+			});
+
+		glEnd();
 	}
 
 	glFlush();
 
 	this->SwapBuffers();
+}
+
+void Canvas::ClearCache()
+{
+	this->lineSegmentArray.clear();
 }
 
 void Canvas::OnResize(wxSizeEvent& event)
