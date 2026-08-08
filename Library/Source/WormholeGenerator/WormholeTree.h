@@ -111,7 +111,7 @@ namespace WormholeGenerator
 
 	private:
 
-		void GeneratePolygons(const GeneratorConfig& config);
+		void GeneratePolygons(const GeneratorConfig& config, ProgressReporterInterface* progressReporter);
 		void GenerateRecursive(const GeneratorConfig& config, std::shared_ptr<Node> parentNode, int currentDepth);
 		void GeneratePolygonsForNode(Node* node, const GeneratorConfig& config);
 
@@ -126,8 +126,7 @@ namespace WormholeGenerator
 		static void EvaluateCubicBezierCurveDerivative(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, HappyMath::Vector3& curveDerivative);
 		static void EvaluateCubicBezierCurveSecondDerivative(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, HappyMath::Vector3& secondCurveDerivative);
 		static void GenerateCubicBezierControlPoints(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, HappyMath::Vector3* controlPointArray);
-		static void CalcTNBFrame(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, Frame& frame);
-		static void AdvanceFrame(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, Frame& frame);
+		static void CalcFrame(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, Frame& frame, bool advance);
 
 		std::shared_ptr<Node> rootNode;
 	};

@@ -49,7 +49,13 @@ bool WormholeTree::Generate(const GeneratorConfig& config, ProgressReporterInter
 
 	this->GenerateRecursive(config, this->rootNode, 0);
 
-	this->GeneratePolygons(config);
+	this->GeneratePolygons(config, progressReporter);
+
+	// STPTODO: Note that at this point we could still go cull triangles that
+	//          we know should not be there in each tube at an intersection.
+	//          This could help reduce Z-fighting in the renderer.  The renderer
+	//          would then need only deal with triangles that cross the boundary
+	//          between legal and illegal.
 
 	return true;
 }
@@ -138,33 +144,29 @@ void WormholeTree::GenerateRecursive(const GeneratorConfig& config, std::shared_
 	secondCurveDerivative = 6.0 * omt * (point[2] - 2.0 * point[1] + point[0]) + 6.0 * t * (point[3] - 2.0 * point[2] + point[1]);
 }
 
-/*static*/ void WormholeTree::CalcTNBFrame(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, Frame& frame)
+/*static*/ void WormholeTree::CalcFrame(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, Frame& frame, bool advance)
 {
-	// Note that one of the weakness of the TNB frame is that it can flip 180 where curvature goes to zero.
 	EvaluateCubicBezierCurveDerivative(tangentPointA, tangentPointB, curveParameter, frame.zAxis);
 	frame.zAxis.Normalize();
 
-	// Approximate the derivative of the tangent function using central differencing.
-	double dt = 0.05;
-	HappyMath::Vector3 vectorA, vectorB;
-	EvaluateCubicBezierCurveDerivative(tangentPointA, tangentPointB, curveParameter + dt, vectorA);
-	EvaluateCubicBezierCurveDerivative(tangentPointA, tangentPointB, curveParameter - dt, vectorB);
-	vectorA.Normalize();
-	vectorB.Normalize();
-	frame.xAxis = (vectorA - vectorB) / (2.0 * dt);
+	// Note that one of the weakness of the TNB frame is that it can flip 180 where curvature goes to zero.
+	// So the advanced flag should be set most of the time.
+	if (!advance)
+	{
+		// Approximate the derivative of the tangent function using central differencing.
+		double dt = 0.05;
+		HappyMath::Vector3 vectorA, vectorB;
+		EvaluateCubicBezierCurveDerivative(tangentPointA, tangentPointB, curveParameter + dt, vectorA);
+		EvaluateCubicBezierCurveDerivative(tangentPointA, tangentPointB, curveParameter - dt, vectorB);
+		vectorA.Normalize();
+		vectorB.Normalize();
+		frame.xAxis = (vectorA - vectorB) / (2.0 * dt);
+	}
 
 	// This is to account for round-off error.  Force a result that is orthogonal and unit-length.
 	frame.xAxis = frame.xAxis.RejectedFrom(frame.zAxis).Normalized();
 
 	// Complete the frame to make a right-handed system.
-	frame.yAxis = frame.zAxis.Cross(frame.xAxis);
-}
-
-/*static*/ void WormholeTree::AdvanceFrame(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, Frame& frame)
-{
-	EvaluateCubicBezierCurveDerivative(tangentPointA, tangentPointB, curveParameter, frame.zAxis);
-	frame.zAxis.Normalize();
-	frame.xAxis = frame.xAxis.RejectedFrom(frame.zAxis).Normalized();
 	frame.yAxis = frame.zAxis.Cross(frame.xAxis);
 }
 
@@ -226,12 +228,35 @@ void WormholeTree::ForEachNode(std::function<void(Node*)> nodeFunc)
 	}
 }
 
-void WormholeTree::GeneratePolygons(const GeneratorConfig& config)
+void WormholeTree::GeneratePolygons(const GeneratorConfig& config, ProgressReporterInterface* progressReporter)
 {
-	this->ForEachNode([this, config](Node* node) -> void
+	int numNodes = 0;
+
+	if (progressReporter)
+	{
+		this->ForEachNode([&numNodes](Node* node) -> void
+			{
+				numNodes++;
+			});
+
+		progressReporter->BeginTask("Generating polygons...");
+	}
+
+	int i = 0;
+
+	this->ForEachNode([this, config, progressReporter, &i, numNodes](Node* node) -> void
 		{
 			this->GeneratePolygonsForNode(node, config);
+
+			if (progressReporter)
+			{
+				double progress = double(++i) / double(numNodes);
+				progressReporter->TaskUpdate(progress);
+			}
 		});
+
+	if (progressReporter)
+		progressReporter->EndTask();
 }
 
 void WormholeTree::GeneratePolygonsForNode(Node* node, const GeneratorConfig& config)
@@ -253,10 +278,8 @@ void WormholeTree::GeneratePolygonsForNode(Node* node, const GeneratorConfig& co
 			HappyMath::Vector3 curvePoint;
 			EvaluateCubicBezierCurve(node->tangentPoint, childNode->tangentPoint, curveParameter, curvePoint);
 
-			if (row == 0)
-				CalcTNBFrame(node->tangentPoint, childNode->tangentPoint, curveParameter, frame);
-			else
-				AdvanceFrame(node->tangentPoint, childNode->tangentPoint, curveParameter, frame);
+			// STPTODO: Note that this still isn't perfect, because the frame at the end of one tube doesn't match that at the beginning of another.
+			CalcFrame(node->tangentPoint, childNode->tangentPoint, curveParameter, frame, row > 0);
 
 			matrix[row] = new HappyMath::Vector3[config.samplesPerLocation];
 

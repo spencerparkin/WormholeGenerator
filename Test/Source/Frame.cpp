@@ -126,7 +126,6 @@ void Frame::OnGenerate(wxCommandEvent& event)
 		ProgressReporter()
 		{
 			this->dialog = nullptr;
-			this->throttle = 0;
 		}
 
 		virtual ~ProgressReporter()
@@ -141,11 +140,8 @@ void Frame::OnGenerate(wxCommandEvent& event)
 
 		virtual void TaskUpdate(double progress) override
 		{
-			if (this->throttle++ % 100 == 0)
-			{
-				double value = progress * 1000.0;
-				this->dialog->Update((int)::floor(value));
-			}
+			double value = progress * 1000.0;
+			this->dialog->Update((int)::floor(value));
 		}
 
 		virtual void EndTask() override
@@ -155,7 +151,6 @@ void Frame::OnGenerate(wxCommandEvent& event)
 		}
 
 		wxProgressDialog* dialog;
-		int throttle;
 	};
 
 	ProgressReporter progressReporter;
