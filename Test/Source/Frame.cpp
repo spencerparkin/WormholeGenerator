@@ -195,13 +195,11 @@ void Frame::OnUpdateUI(wxUpdateUIEvent& event)
 		event.Check((wxGetApp().drawFlags & DF_NODE_POINTS) != 0);
 		break;
 	case ID_Save:
-		event.Enable(wxGetApp().wormholeTree.GetMesh().GetNumPolygons() > 0);
+	case ID_Clear:
+		event.Enable(wxGetApp().wormholeTree.GetRootNode() != nullptr);
 		break;
 	case ID_Load:
 		event.Enable(true);
-		break;
-	case ID_Clear:
-		event.Enable(wxGetApp().wormholeTree.GetRootNode() != nullptr);
 		break;
 	}
 }

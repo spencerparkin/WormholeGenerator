@@ -96,7 +96,6 @@ namespace WormholeGenerator
 		bool LoadFromDisk(const std::string& filePath, std::function<std::shared_ptr<Node>()> nodeMakerFunc = []() { return std::make_shared<WormholeTree::Node>(); });
 
 		Node* GetRootNode() { return this->rootNode.get(); }
-		const HappyMath::PolygonMesh& GetMesh() const { return this->mesh; }
 
 	private:
 
@@ -111,7 +110,5 @@ namespace WormholeGenerator
 		static void CalcTNBFrame(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, HappyMath::Vector3& xAxis, HappyMath::Vector3& yAxis, HappyMath::Vector3& zAxis);
 
 		std::shared_ptr<Node> rootNode;
-
-		HappyMath::PolygonMesh mesh;
 	};
 }

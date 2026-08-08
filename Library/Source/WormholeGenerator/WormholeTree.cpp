@@ -32,7 +32,6 @@ WormholeTree::WormholeTree()
 void WormholeTree::Clear()
 {
 	this->rootNode.reset();
-	this->mesh.Clear();
 }
 
 bool WormholeTree::Generate(const GeneratorConfig& config, ProgressReporterInterface* progressReporter /*= nullptr*/)
@@ -269,9 +268,6 @@ void WormholeTree::GeneratePolygonsForNode(Node* node, const GeneratorConfig& co
 bool WormholeTree::SaveToDisk(const std::string& filePath) const
 {
 	if (!this->rootNode.get())
-		return false;
-
-	if (this->mesh.GetNumPolygons() == 0)
 		return false;
 
 	std::ofstream fileStream;
