@@ -19,7 +19,8 @@ using namespace WormholeGenerator;
 //          is the way to go.  Maybe it's a bit unsatisfying to not figure out the mesh math, but I think
 //          the shader-way of doing this is actually pretty slick, if it can be done efficiently enough.
 //
-//          No, no, no!  This is even easier than I thought.  It's just a reverse Z-buffer check.
+//          An alternative approach is to use off-screen rendering and compositing into the final frame
+//          buffer where all we need to do is make clever use of the Z-buffer.
 
 //--------------------------------- WormholeTree ---------------------------------
 
