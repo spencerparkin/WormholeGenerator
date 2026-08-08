@@ -7,7 +7,7 @@ wxIMPLEMENT_APP(App);
 App::App()
 {
 	this->frame = nullptr;
-	this->drawFlags = DF_SPLINES | DF_SURFACE_POINTS | DF_SURFACE_POLYGONS | DF_NODE_POINTS;
+	this->drawFlags = DF_SPLINES | DF_POLYGONS | DF_NODE_POINTS;
 }
 
 /*virtual*/ App::~App()

@@ -6,6 +6,19 @@
 
 using namespace WormholeGenerator;
 
+// STPTODO: Implement the renderer.  DX11 is a good fit, since it's API is much sainer than OpenGL and
+//          I need a programmable shader pipeline.  That is the key to rendering the wormhole properly.
+//          The subtraction of one tube from another will be done in the shader.  The tricky part will
+//          be determining the closest point on a bezier curve to a given point.  I think that Newton
+//          iteration may be helpful here.  Let f(t) = (x - r(t))^2.  We want to minimize this function.
+//          The derivative, I think, is something like f'(t) = 2*(x - r(t)).r'(t).  We want a zero of
+//          this function, so we need f"(t) = 2*r'(t).r"(t), or something like that.  Our seed for the
+//          Newton iteration could be based on a lerp between the two end-points.  That would get us
+//          pretty close to begin with.  All along I had been trying to do math on meshes in space or
+//          some such thing, and generate the polygons, etc., but I really think that a GPU-based approach
+//          is the way to go.  Maybe it's a bit unsatisfying to not figure out the mesh math, but I think
+//          the shader-way of doing this is actually pretty slick, if it can be done efficiently enough.
+
 //--------------------------------- WormholeTree ---------------------------------
 
 WormholeTree::WormholeTree()
@@ -19,10 +32,7 @@ WormholeTree::WormholeTree()
 void WormholeTree::Clear()
 {
 	this->rootNode.reset();
-	this->graph.Clear();
 	this->mesh.Clear();
-	this->surfacePointArray.clear();
-	this->edgeSet.clear();
 }
 
 bool WormholeTree::Generate(const GeneratorConfig& config, ProgressReporterInterface* progressReporter /*= nullptr*/)
@@ -37,43 +47,7 @@ bool WormholeTree::Generate(const GeneratorConfig& config, ProgressReporterInter
 
 	this->GenerateRecursive(config, this->rootNode, 0);
 
-	this->GenerateSurfacePoints(config.surfacePointConfig, [this](const SurfacePoint& surfacePoint) -> void
-		{
-			this->surfacePointArray.push_back(surfacePoint);
-
-			auto node = new HappyMath::Graph::Node();
-			node->SetVertex(surfacePoint.location);
-			node->SetNormal(surfacePoint.normal);
-			this->graph.AddNode(node);
-		});
-
-	if (progressReporter)
-		progressReporter->BeginTask("Generating graph edges...");
-
-	this->graph.AutoCompleteEdges(config.autoCompleteEdgesConfig.localityRadius, config.autoCompleteEdgesConfig.maxDegree, [progressReporter](double progress) -> void
-		{
-			if (progressReporter)
-				progressReporter->TaskUpdate(progress);
-		});
-
-	if (progressReporter)
-		progressReporter->EndTask();
-
-	this->graph.GenerateEdgeSet(this->edgeSet);
-
-	if (progressReporter)
-		progressReporter->BeginTask("Generating polygon mesh...");
-
-	this->graph.ToPolygonMesh(this->mesh, [progressReporter](double progress) -> void
-		{
-			if (progressReporter)
-				progressReporter->TaskUpdate(progress);
-		});
-
-	if (progressReporter)
-		progressReporter->EndTask();
-
-	this->BucketSortPolygons();
+	this->GeneratePolygons(config);
 
 	return true;
 }
@@ -158,41 +132,25 @@ void WormholeTree::GenerateRecursive(const GeneratorConfig& config, std::shared_
 	secondCurveDerivative = 6.0 * omt * (point[2] - 2.0 * point[1] + point[0]) + 6.0 * t * (point[3] - 2.0 * point[2] + point[1]);
 }
 
-/*static*/ void WormholeTree::FindClosestPointOnCubicBezierCurve(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, const HappyMath::Vector3& point, HappyMath::Vector3& closestPoint)
+/*static*/ void WormholeTree::CalcTNBFrame(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, HappyMath::Vector3& xAxis, HappyMath::Vector3& yAxis, HappyMath::Vector3& zAxis)
 {
-	int stepsPerPass = 10;
-	double minCurveParameter = 0.0;
-	double maxCurveParameter = 1.0;
-	double epsilon = 0.01;
+	EvaluateCubicBezierCurveDerivative(tangentPointA, tangentPointB, curveParameter, zAxis);
+	zAxis.Normalize();
 
-	while ((maxCurveParameter - minCurveParameter) > epsilon)
-	{
-		double smallestSquareDistance = std::numeric_limits<double>::max();
+	// Approximate the derivative of the tangent function using central differencing.
+	double dt = 0.05;
+	HappyMath::Vector3 vectorA, vectorB;
+	EvaluateCubicBezierCurveDerivative(tangentPointA, tangentPointB, curveParameter + dt, vectorA);
+	EvaluateCubicBezierCurveDerivative(tangentPointA, tangentPointB, curveParameter - dt, vectorB);
+	vectorA.Normalize();
+	vectorB.Normalize();
+	xAxis = (vectorA - vectorB) / (2.0 * dt);
 
-		int j = -1;
+	// This is to account for round-off error.  Force a result that is orthogonal and unit-length.
+	xAxis = xAxis.RejectedFrom(zAxis).Normalized();
 
-		for (int i = 0; i < stepsPerPass; i++)
-		{
-			double curveParameter = minCurveParameter + (double(i) / double(stepsPerPass - 1)) * (maxCurveParameter - minCurveParameter);
-
-			HappyMath::Vector3 curvePoint;
-			EvaluateCubicBezierCurve(tangentPointA, tangentPointB, curveParameter, curvePoint);
-
-			double squareDistance = (curvePoint - point).SquareLength();
-			if (squareDistance < smallestSquareDistance)
-			{
-				smallestSquareDistance = squareDistance;
-				closestPoint = curvePoint;
-				j = i;
-			}
-		}
-
-		double newMin = minCurveParameter + (double(j - 1) / double(stepsPerPass - 1)) * (maxCurveParameter - minCurveParameter);
-		double newMax = minCurveParameter + (double(j + 1) / double(stepsPerPass - 1)) * (maxCurveParameter - minCurveParameter);
-
-		minCurveParameter = newMin;
-		maxCurveParameter = newMax;
-	}
+	// Complete the frame to make a right-handed system.
+	yAxis = zAxis.Cross(xAxis);
 }
 
 void WormholeTree::ForEachRenderLine(int linesPerCurve, std::function<void(const HappyMath::LineSegment&)> renderFunc) const
@@ -247,105 +205,64 @@ void WormholeTree::ForEachNode(std::function<void(const Node*)> nodeFunc) const
 	}
 }
 
-void WormholeTree::GenerateSurfacePoints(const SurfacePointGeneratorConfig& config, std::function<void(const SurfacePoint&)> pointFunc) const
+void WormholeTree::GeneratePolygons(const GeneratorConfig& config) const
 {
-	this->ForEachNode([this, config, pointFunc](const Node* node) -> void
+	this->ForEachNode([this, config](const Node* node) -> void
 		{
-			this->GenerateSurfacePointsForNode(node, config, pointFunc);
+			this->GeneratePolygonsForNode(const_cast<Node*>(node), config);
 		});
 }
 
-void WormholeTree::GenerateSurfacePointsForNode(const Node* node, const SurfacePointGeneratorConfig& config, std::function<void(const SurfacePoint&)> pointFunc) const
+void WormholeTree::GeneratePolygonsForNode(Node* node, const GeneratorConfig& config) const
 {
 	for (int i = 0; i < (int)node->childNodeArray.size(); i++)
 	{
-		const Node* childNodeA = node->childNodeArray[i].get();
+		const Node* childNode = node->childNodeArray[i].get();
 
-		for (int j = 0; j < config.numSteps; j++)
+		HappyMath::Vector3** matrix = new HappyMath::Vector3*[config.numSteps];
+
+		for (int row = 0; row < config.numSteps; row++)
 		{
-			double curveParameter = double(j) / double(config.numSteps);
+			double curveParameter = double(row) / double(config.numSteps);
 
 			HappyMath::Vector3 curvePoint;
-			EvaluateCubicBezierCurve(node->tangentPoint, childNodeA->tangentPoint, curveParameter, curvePoint);
+			EvaluateCubicBezierCurve(node->tangentPoint, childNode->tangentPoint, curveParameter, curvePoint);
 
-			// Note that we're not getting the TNB frame here, but we're getting a frame that we can use.
 			HappyMath::Vector3 xAxis, yAxis, zAxis;
-			EvaluateCubicBezierCurveDerivative(node->tangentPoint, childNodeA->tangentPoint, curveParameter, zAxis);
-			zAxis.Normalize();
-			zAxis *= -1.0;
-			xAxis.SetAsOrthogonalTo(zAxis);
-			xAxis.Normalize();
-			yAxis = zAxis.Cross(xAxis);
+			CalcTNBFrame(node->tangentPoint, childNode->tangentPoint, curveParameter, xAxis, yAxis, zAxis);
 
-			for (int k = 0; k < config.samplesPerLocation; k++)
+			matrix[row] = new HappyMath::Vector3[config.samplesPerLocation];
+
+			for (int col = 0; col < config.samplesPerLocation; col++)
 			{
-				double angle = (double(k) / double(config.samplesPerLocation)) * 2.0 * M_PI;
+				double angle = (double(col) / double(config.samplesPerLocation)) * 2.0 * M_PI;
 
-				SurfacePoint surfacePoint;
-				surfacePoint.location = curvePoint + config.wormholeRadius * (xAxis * ::cos(angle) + yAxis * ::sin(angle));
-				surfacePoint.normal = (surfacePoint.location - curvePoint).Normalized();
-
-				bool cullPoint = false;
-
-				for (int l = 0; l < (int)node->childNodeArray.size(); l++)
-				{
-					if (i == l)
-						continue;
-
-					const Node* childNodeB = node->childNodeArray[l].get();
-
-					HappyMath::Vector3 closestPoint;
-					FindClosestPointOnCubicBezierCurve(node->tangentPoint, childNodeB->tangentPoint, surfacePoint.location, closestPoint);
-
-					double squareDistance = (closestPoint - surfacePoint.location).SquareLength();
-					if (squareDistance < config.wormholeRadius * config.wormholeRadius)
-					{
-						cullPoint = true;
-						break;
-					}
-				}
-
-				if (!cullPoint)
-				{
-					pointFunc(surfacePoint);
-				}
+				matrix[row][col] = curvePoint + config.wormholeRadius * (xAxis * ::cos(angle) + yAxis * ::sin(angle));
 			}
 		}
-	}
-}
 
-void WormholeTree::BucketSortPolygons()
-{
-	for (int i = 0; i < (int)this->mesh.GetPolygonArray().size(); i++)
-	{
-		const HappyMath::PolygonMesh::Polygon& polygon = this->mesh.GetPolygon(i);
-		
-		// Skip anything that isn't a triangle for now.
-		if (polygon.vertexArray.size() != 3)
-			continue;
-
-		HappyMath::Polygon standardPolygon;
-		polygon.ToStandalonePolygon(standardPolygon, &this->mesh);
-
-		HappyMath::Vector3 center = standardPolygon.CalcCenter();
-
-		Node* closestNode = nullptr;
-		double smallesteSquraeDistance = std::numeric_limits<double>::max();
-
-		this->ForEachNode([&center, &closestNode, &smallesteSquraeDistance](const Node* node) -> void
+		for (int row = 0; row < config.numSteps - 1; row++)
+		{
+			for (int col = 0; col < config.samplesPerLocation; col++)
 			{
-				double squareDistance = (node->tangentPoint.location - center).SquareLength();
-				if (squareDistance < smallesteSquraeDistance)
-				{
-					smallesteSquraeDistance = squareDistance;
-					closestNode = const_cast<Node*>(node);
-				}
-			});
+				HappyMath::Polygon polygon;
+				polygon.vertexArray.push_back(matrix[row][col]);
+				polygon.vertexArray.push_back(matrix[row][(col + 1) % config.samplesPerLocation]);
+				polygon.vertexArray.push_back(matrix[row + 1][(col + 1) % config.samplesPerLocation]);
+				node->AddPolygon(polygon);
 
-		if (!closestNode)
-			continue;
+				polygon.Clear();
+				polygon.vertexArray.push_back(matrix[row][col]);
+				polygon.vertexArray.push_back(matrix[row + 1][(col + 1) % config.samplesPerLocation]);
+				polygon.vertexArray.push_back(matrix[row + 1][col]);
+				node->AddPolygon(polygon);
+			}
+		}
 
-		closestNode->AddPolygon(standardPolygon);
+		for (int row = 0; row < config.numSteps; row++)
+			delete[] matrix[row];
+
+		delete[] matrix;
 	}
 }
 
@@ -399,23 +316,9 @@ WormholeTree::GeneratorConfig::GeneratorConfig()
 	this->maxBranchFactor = 2;
 	this->minDistBetweenNodes = 10.0;
 	this->maxDistBetweenNodes = 15.0;
-}
-
-//--------------------------------- WormholeTree::SurfacePointGeneratorConfig ---------------------------------
-
-WormholeTree::SurfacePointGeneratorConfig::SurfacePointGeneratorConfig()
-{
 	this->samplesPerLocation = 32;
 	this->numSteps = 32;
 	this->wormholeRadius = 0.25;
-}
-
-//--------------------------------- WormholeTree::AutoCompleteEdgesConfig ---------------------------------
-
-WormholeTree::AutoCompleteEdgesConfig::AutoCompleteEdgesConfig()
-{
-	this->localityRadius = 0.3;
-	this->maxDegree = 8;
 }
 
 //--------------------------------- WormholeTree::Node ---------------------------------

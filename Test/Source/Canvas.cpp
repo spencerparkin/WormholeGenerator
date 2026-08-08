@@ -121,56 +121,7 @@ void Canvas::OnPaint(wxPaintEvent& event)
 		glEnd();
 	}
 
-	if ((wxGetApp().drawFlags & DF_SURFACE_POINTS) != 0)
-	{
-		glBegin(GL_POINTS);
-		glColor4f(1.0f, 0.0f, 0.0f, 1.0f);
-
-		for (const WormholeGenerator::SurfacePoint& surfacePoint : wxGetApp().wormholeTree.GetSurfacePointArray())
-		{
-			glVertex3d(surfacePoint.location.x, surfacePoint.location.y, surfacePoint.location.z);
-		}
-
-		glEnd();
-	}
-
-	if ((wxGetApp().drawFlags & DF_SURFACE_POINT_NORMALS) != 0)
-	{
-		glBegin(GL_LINES);
-		glColor4f(0.0f, 1.0f, 0.0f, 1.0f);
-
-		for (const WormholeGenerator::SurfacePoint& surfacePoint : wxGetApp().wormholeTree.GetSurfacePointArray())
-		{
-			glVertex3d(surfacePoint.location.x, surfacePoint.location.y, surfacePoint.location.z);
-
-			HappyMath::Vector3 tip = surfacePoint.location + 0.1 * surfacePoint.normal;
-			glVertex3d(tip.x, tip.y, tip.z);
-		}
-
-		glEnd();
-	}
-
-	if ((wxGetApp().drawFlags & DF_SURFACE_EDGES) != 0)
-	{
-		glBegin(GL_LINES);
-		glColor4f(0.5f, 0.5f, 1.0f, 1.0f);
-
-		for (auto edge : wxGetApp().wormholeTree.GetEdgeSet())
-		{
-			const HappyMath::Graph::Node* nodeA = wxGetApp().wormholeTree.GetGraph().GetNode(edge.i);
-			const HappyMath::Graph::Node* nodeB = wxGetApp().wormholeTree.GetGraph().GetNode(edge.j);
-
-			const HappyMath::Vector3& vertexA = nodeA->GetVertex();
-			const HappyMath::Vector3& vertexB = nodeB->GetVertex();
-
-			glVertex3d(vertexA.x, vertexA.y, vertexA.z);
-			glVertex3d(vertexB.x, vertexB.y, vertexB.z);
-		}
-
-		glEnd();
-	}
-
-	if ((wxGetApp().drawFlags & DF_SURFACE_POLYGONS) != 0)
+	if ((wxGetApp().drawFlags & DF_POLYGONS) != 0)
 	{
 		glBegin(GL_TRIANGLES);
 

@@ -21,10 +21,7 @@ Frame::Frame() : wxFrame(nullptr, wxID_ANY, "Wormhole Generator Test App", wxDef
 
 	wxMenu* optionsMenu = new wxMenu();
 	optionsMenu->Append(new wxMenuItem(optionsMenu, ID_DRAW_SPLINES, "Draw Splines", "", wxITEM_CHECK));
-	optionsMenu->Append(new wxMenuItem(optionsMenu, ID_DRAW_SURFACE_POINTS, "Draw Surface Points", "", wxITEM_CHECK));
-	optionsMenu->Append(new wxMenuItem(optionsMenu, ID_DRAW_SURFACE_POINT_NORMALS, "Draw Surface Point Normals", "", wxITEM_CHECK));
-	optionsMenu->Append(new wxMenuItem(optionsMenu, ID_DRAW_SURFACE_EDGES, "Draw Surface Edges", "", wxITEM_CHECK));
-	optionsMenu->Append(new wxMenuItem(optionsMenu, ID_DRAW_SURFACE_POLYGONS, "Draw Surface Polygons", "", wxITEM_CHECK));
+	optionsMenu->Append(new wxMenuItem(optionsMenu, ID_DRAW_POLYGONS, "Draw Polygons", "", wxITEM_CHECK));
 	optionsMenu->Append(new wxMenuItem(optionsMenu, ID_DRAW_NODE_POINTS, "Draw Node Points", "", wxITEM_CHECK));
 
 	wxMenuBar* menuBar = new wxMenuBar();
@@ -43,19 +40,13 @@ Frame::Frame() : wxFrame(nullptr, wxID_ANY, "Wormhole Generator Test App", wxDef
 	this->Bind(wxEVT_MENU, &Frame::OnExit, this, ID_Exit);
 	this->Bind(wxEVT_MENU, &Frame::OnGenerate, this, ID_Generate);
 	this->Bind(wxEVT_MENU, &Frame::OnToggleDrawFlag, this, ID_DRAW_SPLINES);
-	this->Bind(wxEVT_MENU, &Frame::OnToggleDrawFlag, this, ID_DRAW_SURFACE_POINTS);
-	this->Bind(wxEVT_MENU, &Frame::OnToggleDrawFlag, this, ID_DRAW_SURFACE_POINT_NORMALS);
-	this->Bind(wxEVT_MENU, &Frame::OnToggleDrawFlag, this, ID_DRAW_SURFACE_EDGES);
-	this->Bind(wxEVT_MENU, &Frame::OnToggleDrawFlag, this, ID_DRAW_SURFACE_POLYGONS);
+	this->Bind(wxEVT_MENU, &Frame::OnToggleDrawFlag, this, ID_DRAW_POLYGONS);
 	this->Bind(wxEVT_MENU, &Frame::OnToggleDrawFlag, this, ID_DRAW_NODE_POINTS);
 	this->Bind(wxEVT_MENU, &Frame::OnSave, this, ID_Save);
 	this->Bind(wxEVT_MENU, &Frame::OnLoad, this, ID_Load);
 	this->Bind(wxEVT_MENU, &Frame::OnClear, this, ID_Clear);
 	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_DRAW_SPLINES);
-	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_DRAW_SURFACE_POINTS);
-	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_DRAW_SURFACE_POINT_NORMALS);
-	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_DRAW_SURFACE_EDGES);
-	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_DRAW_SURFACE_POLYGONS);
+	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_DRAW_POLYGONS);
 	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_DRAW_NODE_POINTS);
 	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_Save);
 	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_Load);
@@ -122,11 +113,9 @@ void Frame::OnGenerate(wxCommandEvent& event)
 	config.minDistBetweenNodes = 1.0;
 	config.maxDistBetweenNodes = 2.0;
 	config.maxBranchFactor = 2;
-	config.autoCompleteEdgesConfig.localityRadius = 0.3;
-	config.autoCompleteEdgesConfig.maxDegree = 8;
-	config.surfacePointConfig.samplesPerLocation = 16;
-	config.surfacePointConfig.numSteps = 32;
-	config.surfacePointConfig.wormholeRadius = 0.2;
+	config.samplesPerLocation = 16;
+	config.numSteps = 32;
+	config.wormholeRadius = 0.2;
 
 	class ProgressReporter : public WormholeGenerator::WormholeTree::ProgressReporterInterface
 	{
@@ -183,17 +172,8 @@ void Frame::OnToggleDrawFlag(wxCommandEvent& event)
 	case ID_DRAW_SPLINES:
 		wxGetApp().drawFlags ^= DF_SPLINES;
 		break;
-	case ID_DRAW_SURFACE_POINTS:
-		wxGetApp().drawFlags ^= DF_SURFACE_POINTS;
-		break;
-	case ID_DRAW_SURFACE_POINT_NORMALS:
-		wxGetApp().drawFlags ^= DF_SURFACE_POINT_NORMALS;
-		break;
-	case ID_DRAW_SURFACE_EDGES:
-		wxGetApp().drawFlags ^= DF_SURFACE_EDGES;
-		break;
-	case ID_DRAW_SURFACE_POLYGONS:
-		wxGetApp().drawFlags ^= DF_SURFACE_POLYGONS;
+	case ID_DRAW_POLYGONS:
+		wxGetApp().drawFlags ^= DF_POLYGONS;
 		break;
 	case ID_DRAW_NODE_POINTS:
 		wxGetApp().drawFlags ^= DF_NODE_POINTS;
@@ -208,17 +188,8 @@ void Frame::OnUpdateUI(wxUpdateUIEvent& event)
 	case ID_DRAW_SPLINES:
 		event.Check((wxGetApp().drawFlags & DF_SPLINES) != 0);
 		break;
-	case ID_DRAW_SURFACE_POINTS:
-		event.Check((wxGetApp().drawFlags & DF_SURFACE_POINTS) != 0);
-		break;
-	case ID_DRAW_SURFACE_POINT_NORMALS:
-		event.Check((wxGetApp().drawFlags & DF_SURFACE_POINT_NORMALS) != 0);
-		break;
-	case ID_DRAW_SURFACE_EDGES:
-		event.Check((wxGetApp().drawFlags & DF_SURFACE_EDGES) != 0);
-		break;
-	case ID_DRAW_SURFACE_POLYGONS:
-		event.Check((wxGetApp().drawFlags & DF_SURFACE_POLYGONS) != 0);
+	case ID_DRAW_POLYGONS:
+		event.Check((wxGetApp().drawFlags & DF_POLYGONS) != 0);
 		break;
 	case ID_DRAW_NODE_POINTS:
 		event.Check((wxGetApp().drawFlags & DF_NODE_POINTS) != 0);

@@ -13,12 +13,6 @@
 
 namespace WormholeGenerator
 {
-	struct SurfacePoint
-	{
-		HappyMath::Vector3 location;
-		HappyMath::Vector3 normal;
-	};
-
 	/**
 	 * These are cubic Bezier curves chained together so that we get
 	 * continuity of the derivative across boundaries, but we're also
@@ -41,25 +35,6 @@ namespace WormholeGenerator
 			HappyMath::Vector3 unitDirection;
 		};
 
-		class SurfacePointGeneratorConfig
-		{
-		public:
-			SurfacePointGeneratorConfig();
-
-			int samplesPerLocation;
-			int numSteps;
-			double wormholeRadius;
-		};
-
-		class AutoCompleteEdgesConfig
-		{
-		public:
-			AutoCompleteEdgesConfig();
-
-			double localityRadius;
-			int maxDegree;
-		};
-
 		class GeneratorConfig
 		{
 		public:
@@ -73,8 +48,9 @@ namespace WormholeGenerator
 			int maxBranchFactor;
 			double minDistBetweenNodes;
 			double maxDistBetweenNodes;
-			SurfacePointGeneratorConfig surfacePointConfig;
-			AutoCompleteEdgesConfig autoCompleteEdgesConfig;
+			int samplesPerLocation;
+			int numSteps;
+			double wormholeRadius;
 		};
 
 		struct RenderVertex
@@ -120,30 +96,22 @@ namespace WormholeGenerator
 		bool LoadFromDisk(const std::string& filePath, std::function<std::shared_ptr<Node>()> nodeMakerFunc = []() { return std::make_shared<WormholeTree::Node>(); });
 
 		Node* GetRootNode() { return this->rootNode.get(); }
-		const std::vector<WormholeGenerator::SurfacePoint>& GetSurfacePointArray() const { return this->surfacePointArray; }
-		const HappyMath::Graph& GetGraph() const { return this->graph; }
-		const std::set<HappyMath::Graph::UnorderedEdge, HappyMath::Graph::UnorderedEdge>& GetEdgeSet() const { return this->edgeSet; }
 		const HappyMath::PolygonMesh& GetMesh() const { return this->mesh; }
 
 	private:
 
-		void GenerateSurfacePoints(const SurfacePointGeneratorConfig& config, std::function<void(const SurfacePoint&)> pointFunc) const;
+		void GeneratePolygons(const GeneratorConfig& config) const;
 		void GenerateRecursive(const GeneratorConfig& config, std::shared_ptr<Node> parentNode, int currentDepth);
-		void GenerateSurfacePointsForNode(const Node* node, const SurfacePointGeneratorConfig& config, std::function<void(const SurfacePoint&)> pointFunc) const;
-		void BucketSortPolygons();
+		void GeneratePolygonsForNode(Node* node, const GeneratorConfig& config) const;
 
 		static void EvaluateCubicBezierCurve(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, HappyMath::Vector3& curvePoint);
 		static void EvaluateCubicBezierCurveDerivative(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, HappyMath::Vector3& curveDerivative);
 		static void EvaluateCubicBezierCurveSecondDerivative(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, HappyMath::Vector3& secondCurveDerivative);
 		static void GenerateCubicBezierControlPoints(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, HappyMath::Vector3* controlPointArray);
-		static void FindClosestPointOnCubicBezierCurve(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, const HappyMath::Vector3& point, HappyMath::Vector3& closestPoint);
+		static void CalcTNBFrame(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, HappyMath::Vector3& xAxis, HappyMath::Vector3& yAxis, HappyMath::Vector3& zAxis);
 
 		std::shared_ptr<Node> rootNode;
-		std::vector<WormholeGenerator::SurfacePoint> surfacePointArray;
-		HappyMath::Graph graph;
-		std::set<HappyMath::Graph::UnorderedEdge, HappyMath::Graph::UnorderedEdge> edgeSet;
-		HappyMath::PolygonMesh mesh;
 
-		// STPTODO: Add normal buffer and UV buffer.
+		HappyMath::PolygonMesh mesh;
 	};
 }
