@@ -23,6 +23,7 @@ Frame::Frame() : wxFrame(nullptr, wxID_ANY, "Wormhole Generator Test App", wxDef
 	optionsMenu->Append(new wxMenuItem(optionsMenu, ID_DRAW_SPLINES, "Draw Splines", "", wxITEM_CHECK));
 	optionsMenu->Append(new wxMenuItem(optionsMenu, ID_DRAW_POLYGONS, "Draw Polygons", "", wxITEM_CHECK));
 	optionsMenu->Append(new wxMenuItem(optionsMenu, ID_DRAW_NODE_POINTS, "Draw Node Points", "", wxITEM_CHECK));
+	optionsMenu->Append(new wxMenuItem(optionsMenu, ID_DRAW_WIREFRAME, "Draw Wireframe", "", wxITEM_CHECK));
 
 	wxMenuBar* menuBar = new wxMenuBar();
 	menuBar->Append(programMenu, "Program");
@@ -42,12 +43,14 @@ Frame::Frame() : wxFrame(nullptr, wxID_ANY, "Wormhole Generator Test App", wxDef
 	this->Bind(wxEVT_MENU, &Frame::OnToggleDrawFlag, this, ID_DRAW_SPLINES);
 	this->Bind(wxEVT_MENU, &Frame::OnToggleDrawFlag, this, ID_DRAW_POLYGONS);
 	this->Bind(wxEVT_MENU, &Frame::OnToggleDrawFlag, this, ID_DRAW_NODE_POINTS);
+	this->Bind(wxEVT_MENU, &Frame::OnToggleDrawFlag, this, ID_DRAW_WIREFRAME);
 	this->Bind(wxEVT_MENU, &Frame::OnSave, this, ID_Save);
 	this->Bind(wxEVT_MENU, &Frame::OnLoad, this, ID_Load);
 	this->Bind(wxEVT_MENU, &Frame::OnClear, this, ID_Clear);
 	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_DRAW_SPLINES);
 	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_DRAW_POLYGONS);
 	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_DRAW_NODE_POINTS);
+	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_DRAW_WIREFRAME);
 	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_Save);
 	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_Load);
 	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_Clear);
@@ -178,6 +181,9 @@ void Frame::OnToggleDrawFlag(wxCommandEvent& event)
 	case ID_DRAW_NODE_POINTS:
 		wxGetApp().drawFlags ^= DF_NODE_POINTS;
 		break;
+	case ID_DRAW_WIREFRAME:
+		wxGetApp().drawFlags ^= DF_WIREFRAME;
+		break;
 	}
 }
 
@@ -193,6 +199,9 @@ void Frame::OnUpdateUI(wxUpdateUIEvent& event)
 		break;
 	case ID_DRAW_NODE_POINTS:
 		event.Check((wxGetApp().drawFlags & DF_NODE_POINTS) != 0);
+		break;
+	case ID_DRAW_WIREFRAME:
+		event.Check((wxGetApp().drawFlags & DF_WIREFRAME) != 0);
 		break;
 	case ID_Save:
 	case ID_Clear:

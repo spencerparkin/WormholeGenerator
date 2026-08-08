@@ -57,7 +57,21 @@ namespace WormholeGenerator
 		{
 			HappyMath::Vector3 location;
 			HappyMath::Vector3 normal;
-			uint32_t curve;
+
+			std::string MakeKey() const;
+		};
+
+		class Node;
+
+		class Branch
+		{
+		public:
+			std::shared_ptr<Node> node;
+			std::vector<RenderVertex> vertexBuffer;
+			std::vector<uint32_t> indexBuffer;
+			std::unordered_map<std::string, uint32_t> indexBufferMap;
+
+			void AddPolygon(const HappyMath::Polygon& polygon);
 		};
 
 		class Node : public std::enable_shared_from_this<Node>
@@ -69,13 +83,9 @@ namespace WormholeGenerator
 			bool SaveToStream(std::ostream& outputStream) const;
 			bool LoadFromStream(std::istream& inputStream, std::function<std::shared_ptr<Node>()> nodeMakerFunc);
 
-			void AddPolygon(const HappyMath::Polygon& polygon, uint32_t curve);
-
 			TangentPoint tangentPoint;
-			std::vector<std::shared_ptr<Node>> childNodeArray;
-			std::vector<RenderVertex> vertexBuffer;
-			std::vector<uint32_t> indexBuffer;
-			std::unordered_map<std::string, uint32_t> indexBufferMap;
+
+			std::vector<std::shared_ptr<Branch>> branchArray;
 		};
 
 		class ProgressReporterInterface
@@ -92,6 +102,7 @@ namespace WormholeGenerator
 		void Clear();
 		bool Generate(const GeneratorConfig& config, ProgressReporterInterface* progressReporter = nullptr);
 		void ForEachRenderLine(int linesPerCurve, std::function<void(const HappyMath::LineSegment&)> renderFunc) const;
+		void ForEachNode(std::function<void(Node*)> nodeFunc);
 		void ForEachNode(std::function<void(const Node*)> nodeFunc) const;
 		bool SaveToDisk(const std::string& filePath) const;
 		bool LoadFromDisk(const std::string& filePath, std::function<std::shared_ptr<Node>()> nodeMakerFunc = []() { return std::make_shared<WormholeTree::Node>(); });
@@ -100,15 +111,23 @@ namespace WormholeGenerator
 
 	private:
 
-		void GeneratePolygons(const GeneratorConfig& config) const;
+		void GeneratePolygons(const GeneratorConfig& config);
 		void GenerateRecursive(const GeneratorConfig& config, std::shared_ptr<Node> parentNode, int currentDepth);
-		void GeneratePolygonsForNode(Node* node, const GeneratorConfig& config) const;
+		void GeneratePolygonsForNode(Node* node, const GeneratorConfig& config);
+
+		struct Frame
+		{
+			HappyMath::Vector3 xAxis;
+			HappyMath::Vector3 yAxis;
+			HappyMath::Vector3 zAxis;
+		};
 
 		static void EvaluateCubicBezierCurve(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, HappyMath::Vector3& curvePoint);
 		static void EvaluateCubicBezierCurveDerivative(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, HappyMath::Vector3& curveDerivative);
 		static void EvaluateCubicBezierCurveSecondDerivative(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, HappyMath::Vector3& secondCurveDerivative);
 		static void GenerateCubicBezierControlPoints(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, HappyMath::Vector3* controlPointArray);
-		static void CalcTNBFrame(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, HappyMath::Vector3& xAxis, HappyMath::Vector3& yAxis, HappyMath::Vector3& zAxis);
+		static void CalcTNBFrame(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, Frame& frame);
+		static void AdvanceFrame(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, Frame& frame);
 
 		std::shared_ptr<Node> rootNode;
 	};
