@@ -18,6 +18,8 @@ using namespace WormholeGenerator;
 //          some such thing, and generate the polygons, etc., but I really think that a GPU-based approach
 //          is the way to go.  Maybe it's a bit unsatisfying to not figure out the mesh math, but I think
 //          the shader-way of doing this is actually pretty slick, if it can be done efficiently enough.
+//
+//          No, no, no!  This is even easier than I thought.  It's just a reverse Z-buffer check.
 
 //--------------------------------- WormholeTree ---------------------------------
 
