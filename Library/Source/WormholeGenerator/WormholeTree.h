@@ -57,6 +57,7 @@ namespace WormholeGenerator
 		{
 			HappyMath::Vector3 location;
 			HappyMath::Vector3 normal;
+			uint32_t curve;
 		};
 
 		class Node : public std::enable_shared_from_this<Node>
@@ -68,7 +69,7 @@ namespace WormholeGenerator
 			bool SaveToStream(std::ostream& outputStream) const;
 			bool LoadFromStream(std::istream& inputStream, std::function<std::shared_ptr<Node>()> nodeMakerFunc);
 
-			void AddPolygon(const HappyMath::Polygon& polygon);
+			void AddPolygon(const HappyMath::Polygon& polygon, uint32_t curve);
 
 			TangentPoint tangentPoint;
 			std::vector<std::shared_ptr<Node>> childNodeArray;

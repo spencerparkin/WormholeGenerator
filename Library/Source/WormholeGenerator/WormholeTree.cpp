@@ -248,13 +248,13 @@ void WormholeTree::GeneratePolygonsForNode(Node* node, const GeneratorConfig& co
 				polygon.vertexArray.push_back(matrix[row][col]);
 				polygon.vertexArray.push_back(matrix[row][(col + 1) % config.samplesPerLocation]);
 				polygon.vertexArray.push_back(matrix[row + 1][(col + 1) % config.samplesPerLocation]);
-				node->AddPolygon(polygon);
+				node->AddPolygon(polygon, i);
 
 				polygon.Clear();
 				polygon.vertexArray.push_back(matrix[row][col]);
 				polygon.vertexArray.push_back(matrix[row + 1][(col + 1) % config.samplesPerLocation]);
 				polygon.vertexArray.push_back(matrix[row + 1][col]);
-				node->AddPolygon(polygon);
+				node->AddPolygon(polygon, i);
 			}
 		}
 
@@ -327,7 +327,7 @@ WormholeTree::Node::Node()
 {
 }
 
-void WormholeTree::Node::AddPolygon(const HappyMath::Polygon& polygon)
+void WormholeTree::Node::AddPolygon(const HappyMath::Polygon& polygon, uint32_t curve)
 {
 	HappyMath::Plane plane = polygon.CalcPlane(true);
 
@@ -336,12 +336,13 @@ void WormholeTree::Node::AddPolygon(const HappyMath::Polygon& polygon)
 		RenderVertex vertex;
 		vertex.location = polygon.vertexArray[j];
 		vertex.normal = plane.unitNormal;
+		vertex.curve = curve;
 
 		// This is actually really stupid, because I don't think we'll be re-using any vertex.
 		// But I'm going to keep the index/vertex buffer combo, because maybe we can optimize this later.
-		std::string key = std::format("{}_{}_{}_{}_{}_{}",
+		std::string key = std::format("{}_{}_{}/{}_{}_{}/{}",
 			vertex.location.x, vertex.location.y, vertex.location.z,
-			vertex.normal.x, vertex.normal.y, vertex.normal.z);
+			vertex.normal.x, vertex.normal.y, vertex.normal.z, curve);
 
 		auto pair = indexBufferMap.find(key);
 		if (pair != indexBufferMap.end())
@@ -378,6 +379,7 @@ bool WormholeTree::Node::SaveToStream(std::ostream& outputStream) const
 		const RenderVertex& vertex = this->vertexBuffer[i];
 		vertex.location.Dump(outputStream);
 		vertex.normal.Dump(outputStream);
+		outputStream.write((char*)&vertex.curve, sizeof(uint32_t));
 	}
 
 	size = (int)childNodeArray.size();
@@ -412,6 +414,7 @@ bool WormholeTree::Node::LoadFromStream(std::istream& inputStream, std::function
 		RenderVertex renderVertex;
 		renderVertex.location.Restore(inputStream);
 		renderVertex.normal.Restore(inputStream);
+		inputStream.read((char*)&renderVertex.curve, sizeof(uint32_t));
 		this->vertexBuffer.push_back(renderVertex);
 	}
 
