@@ -7,7 +7,11 @@ project(WormholeGenerator)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(IMZADI_BUILD_GAMES OFF)
+set(IMZADI_BUILD_TOOLS OFF)
+set(HAPPYMATH_BUILD_TEST OFF)
+
 add_subdirectory(Library)
 add_subdirectory(Test)
 add_subdirectory(Simulation)
-add_subdirectory(Dependencies/HappyMath)
+add_subdirectory(Dependencies/Imzadi)
