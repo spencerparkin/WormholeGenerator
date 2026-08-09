@@ -1,0 +1,24 @@
+# CMakeLists.txt for wormhole simulation
+
+set(WORMHOLE_SIMULATIN_SOURCES
+	Source/Main.cpp
+	Source/Main.h
+	Source/App.cpp
+	Source/App.h
+)
+
+add_executable(WormholeSimulation WIN32
+	${WORMHOLE_SIMULATIN_SOURCES}
+)
+
+target_link_libraries(WormholeSimulation
+	WormholeGenerator
+	d3d11.lib
+    d3dcompiler.lib    
+    Xinput9_1_0.lib
+)
+
+target_compile_definitions(WormholeSimulation PRIVATE
+    _USE_MATH_DEFINES
+    WIN32_LEAN_AND_MEAN
+)
