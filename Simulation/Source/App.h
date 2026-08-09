@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Game.h"
-#include "WormholeGenerator/WormholeTree.h"
 
 class App : public Imzadi::Game
 {
@@ -10,7 +9,4 @@ public:
 	virtual ~App();
 
 	virtual bool PostInit() override;
-
-private:
-	WormholeGenerator::WormholeTree wormholeTree;
 };

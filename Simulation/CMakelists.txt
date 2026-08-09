@@ -5,6 +5,8 @@ set(WORMHOLE_SIMULATIN_SOURCES
 	Source/Main.h
 	Source/App.cpp
 	Source/App.h
+	Source/CustomAssetCache.cpp
+	Source/CustomAssetCache.h
 )
 
 add_executable(WormholeSimulation WIN32
