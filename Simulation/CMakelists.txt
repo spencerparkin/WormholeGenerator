@@ -13,12 +13,11 @@ add_executable(WormholeSimulation WIN32
 
 target_link_libraries(WormholeSimulation
 	WormholeGenerator
-	d3d11.lib
-    d3dcompiler.lib    
-    Xinput9_1_0.lib
+	ImzadiGameEngine
 )
 
 target_compile_definitions(WormholeSimulation PRIVATE
     _USE_MATH_DEFINES
     WIN32_LEAN_AND_MEAN
+	NOMINMAX
 )
