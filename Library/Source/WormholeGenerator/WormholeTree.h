@@ -6,6 +6,7 @@
 #include "HappyMath/Polygon.h"
 #include "HappyMath/Graph.h"
 #include "HappyMath/PolygonMesh.h"
+#include "JsonValue.h"
 #include <memory>
 #include <vector>
 #include <functional>
@@ -72,6 +73,8 @@ namespace WormholeGenerator
 			std::unordered_map<std::string, uint32_t> indexBufferMap;
 
 			void AddPolygon(const HappyMath::Polygon& polygon);
+
+			std::shared_ptr<ParseParty::JsonObject> GenerateImzadiAsset(const std::string& folderPath, int& count) const;
 		};
 
 		class Node : public std::enable_shared_from_this<Node>
@@ -82,6 +85,8 @@ namespace WormholeGenerator
 
 			bool SaveToStream(std::ostream& outputStream) const;
 			bool LoadFromStream(std::istream& inputStream, std::function<std::shared_ptr<Node>()> nodeMakerFunc);
+
+			std::shared_ptr<ParseParty::JsonObject> GenerateImzadiAsset(const std::string& folderPath, int& count) const;
 
 			TangentPoint tangentPoint;
 
@@ -106,6 +111,7 @@ namespace WormholeGenerator
 		void ForEachNode(std::function<void(const Node*)> nodeFunc) const;
 		bool SaveToDisk(const std::string& filePath) const;
 		bool LoadFromDisk(const std::string& filePath, std::function<std::shared_ptr<Node>()> nodeMakerFunc = []() { return std::make_shared<WormholeTree::Node>(); });
+		bool GenerateImzadiAsset(const std::string& filePath) const;
 
 		Node* GetRootNode() { return this->rootNode.get(); }
 

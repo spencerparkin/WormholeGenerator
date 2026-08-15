@@ -20,6 +20,7 @@ private:
 	void OnSave(wxCommandEvent& event);
 	void OnLoad(wxCommandEvent& event);
 	void OnClear(wxCommandEvent& event);
+	void OnGenerateImzadiAsset(wxCommandEvent& event);
 
 	Canvas* canvas;
 };

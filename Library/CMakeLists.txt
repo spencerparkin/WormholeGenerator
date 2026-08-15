@@ -14,6 +14,7 @@ target_compile_definitions(WormholeGenerator PRIVATE
 target_link_libraries(WormholeGenerator
 	PUBLIC
 	HappyMath
+	ParseParty
 )
 
 target_include_directories(WormholeGenerator PUBLIC Source)

@@ -3,8 +3,10 @@
 #include <unordered_set>
 #include <math.h>
 #include <format>
+#include <filesystem>
 
 using namespace WormholeGenerator;
+using namespace ParseParty;
 
 // STPTODO: Implement the renderer.  DX11 is a good fit, since it's API is much sainer than OpenGL and
 //          I need a programmable shader pipeline.  That is the key to rendering the wormhole properly.
@@ -350,6 +352,35 @@ bool WormholeTree::LoadFromDisk(const std::string& filePath, std::function<std::
 	return true;
 }
 
+bool WormholeTree::GenerateImzadiAsset(const std::string& filePath) const
+{
+	if (!this->rootNode.get())
+		return false;
+
+	std::shared_ptr<JsonObject> jsonWormholeTree = std::make_shared<JsonObject>();
+
+	std::string folderPath = std::filesystem::path(filePath).parent_path().string();
+
+	int count = 0;
+	std::shared_ptr<JsonObject> jsonRootNode = this->rootNode->GenerateImzadiAsset(folderPath, count);
+	if (!jsonRootNode.get())
+		return false;
+
+	jsonWormholeTree->SetValue("root", jsonRootNode);
+
+	std::string jsonText;
+	jsonWormholeTree->PrintJson(jsonText);
+
+	std::ofstream fileStream;
+	fileStream.open(filePath, std::ios::out);
+	if (!fileStream.is_open())
+		return false;
+
+	fileStream << jsonText;
+	fileStream.close();
+	return true;
+}
+
 //--------------------------------- WormholeTree::GeneratorConfig ---------------------------------
 
 WormholeTree::GeneratorConfig::GeneratorConfig()
@@ -405,6 +436,93 @@ void WormholeTree::Branch::AddPolygon(const HappyMath::Polygon& polygon)
 			indexBufferMap.insert(std::pair(key, index));
 		}
 	}
+}
+
+std::shared_ptr<JsonObject> WormholeTree::Branch::GenerateImzadiAsset(const std::string& folderPath, int& count) const
+{
+	std::shared_ptr<JsonObject> jsonBranch = std::make_shared<JsonObject>();
+
+	std::string renderMeshPath = std::format("{}/render_mesh_{}.render_mesh", folderPath.c_str(), count);
+	std::string indexBufferPath = std::format("{}/index_buffer_{}.buffer", folderPath.c_str(), count);
+	std::string vertexBufferPath = std::format("{}/vertex_buffer_{}.buffer", folderPath.c_str(), count);
+
+	jsonBranch->SetValue("render_mesh", std::make_shared<JsonString>(std::format("render_mesh_{}.render_mesh", count)));
+
+	std::shared_ptr<JsonObject> jsonRenderMesh = std::make_shared<JsonObject>();
+	jsonRenderMesh->SetValue("primitive_type", std::make_shared<JsonString>("TRIANGLE_LIST"));
+	jsonRenderMesh->SetValue("shader", std::make_shared<JsonString>("Shaders/Wormhole.shader"));
+	jsonRenderMesh->SetValue("index_buffer", std::make_shared<JsonString>(std::format("index_buffer_{}.buffer", count)));
+	jsonRenderMesh->SetValue("vertex_buffer", std::make_shared<JsonString>(std::format("vertex_buffer_{}.buffer", count)));
+	jsonRenderMesh->SetValue("name", std::make_shared<JsonString>(std::format("wormhole_render_mesh_{}", count)));
+
+	std::ofstream fileStream;
+	fileStream.open(renderMeshPath, std::ios::out);
+	if (!fileStream.is_open())
+		return nullptr;
+
+	std::string jsonText;
+	jsonRenderMesh->PrintJson(jsonText);
+	fileStream << jsonText;
+	fileStream.close();
+
+	std::shared_ptr<JsonArray> jsonBuffer = std::make_shared<JsonArray>();
+	for (int i = 0; i < (int)this->indexBuffer.size(); i++)
+		jsonBuffer->PushValue(std::make_shared<JsonInt>(this->indexBuffer[i]));
+
+	std::shared_ptr<JsonObject> jsonIndexBuffer = std::make_shared<JsonObject>();
+	jsonIndexBuffer->SetValue("bind", std::make_shared<JsonString>("index"));
+	jsonIndexBuffer->SetValue("stride", std::make_shared<JsonInt>(1));
+	jsonIndexBuffer->SetValue("type", std::make_shared<JsonString>("uint"));
+	jsonIndexBuffer->SetValue("buffer", jsonBuffer);
+
+	fileStream.open(indexBufferPath, std::ios::out);
+	if (!fileStream.is_open())
+		return nullptr;
+
+	jsonText = "";
+	jsonIndexBuffer->PrintJson(jsonText);
+	fileStream << jsonText;
+	fileStream.close();
+
+	jsonBuffer = std::make_shared<JsonArray>();
+	for (int i = 0; i < (int)this->vertexBuffer.size(); i++)
+	{
+		const RenderVertex& vertex = this->vertexBuffer[i];
+
+		jsonBuffer->PushValue(std::make_shared<JsonFloat>(vertex.location.x));
+		jsonBuffer->PushValue(std::make_shared<JsonFloat>(vertex.location.y));
+		jsonBuffer->PushValue(std::make_shared<JsonFloat>(vertex.location.z));
+
+		jsonBuffer->PushValue(std::make_shared<JsonFloat>(vertex.normal.x));
+		jsonBuffer->PushValue(std::make_shared<JsonFloat>(vertex.normal.y));
+		jsonBuffer->PushValue(std::make_shared<JsonFloat>(vertex.normal.z));
+	}
+
+	std::shared_ptr<JsonObject> jsonVertexBuffer = std::make_shared<JsonObject>();
+	jsonVertexBuffer->SetValue("bind", std::make_shared<JsonString>("vertex"));
+	jsonVertexBuffer->SetValue("stride", std::make_shared<JsonInt>(6));
+	jsonVertexBuffer->SetValue("type", std::make_shared<JsonString>("float"));
+	jsonVertexBuffer->SetValue("buffer", jsonBuffer);
+
+	fileStream.open(vertexBufferPath, std::ios::out);
+	if (!fileStream.is_open())
+		return nullptr;
+	
+	jsonText = "";
+	jsonVertexBuffer->PrintJson(jsonText);
+	fileStream << jsonText;
+	fileStream.close();
+
+	if (this->node.get())
+	{
+		std::shared_ptr<JsonObject> jsonNode = this->node->GenerateImzadiAsset(folderPath, ++count);
+		if (!jsonNode.get())
+			return nullptr;
+
+		jsonBranch->SetValue("child", jsonNode);
+	}
+
+	return jsonBranch;
 }
 
 //--------------------------------- WormholeTree::Node ---------------------------------
@@ -496,4 +614,25 @@ bool WormholeTree::Node::LoadFromStream(std::istream& inputStream, std::function
 	}
 
 	return true;
+}
+
+std::shared_ptr<JsonObject> WormholeTree::Node::GenerateImzadiAsset(const std::string& folderPath, int& count) const
+{
+	std::shared_ptr<JsonObject> jsonNode = std::make_shared<JsonObject>();
+
+	std::shared_ptr<JsonArray> jsonBranchArray = std::make_shared<JsonArray>();
+
+	for (int i = 0; i < (int)this->branchArray.size(); i++)
+	{
+		const Branch* branch = this->branchArray[i].get();
+		std::shared_ptr<JsonObject> jsonBranch = branch->GenerateImzadiAsset(folderPath, count);
+		if (!jsonBranch.get())
+			return nullptr;
+
+		jsonBranchArray->PushValue(jsonBranch);
+	}
+
+	jsonNode->SetValue("branches", jsonBranchArray);
+
+	return jsonNode;
 }

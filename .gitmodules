@@ -1,3 +1,6 @@
 [submodule "Dependencies/Imzadi"]
 	path = Dependencies/Imzadi
 	url = https://github.com/spencerparkin/Imzadi.git
+[submodule "Dependencies/ParseParty"]
+	path = Dependencies/ParseParty
+	url = https://github.com/spencerparkin/ParseParty.git

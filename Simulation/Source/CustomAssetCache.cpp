@@ -1,4 +1,5 @@
 #include "CustomAssetCache.h"
+#include "WormholeTreeAsset.h"
 
 CustomAssetCache::CustomAssetCache()
 {
@@ -14,7 +15,8 @@ CustomAssetCache::CustomAssetCache()
 	std::string ext = assetPath.extension().string();
 	std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return std::tolower(c); });
 	
-	// STPTODO: Make a wormhole asset.  It will get used by a wormhole render object, which I also need to make.
+	if (ext == ".wormhole_asset")
+		return new WormholeTreeAsset();
 
 	Imzadi::Asset* asset = AssetCache::CreateBlankAssetForFileType(assetFile);
 	if (asset)

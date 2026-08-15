@@ -17,6 +17,8 @@ Frame::Frame() : wxFrame(nullptr, wxID_ANY, "Wormhole Generator Test App", wxDef
 	programMenu->Append(new wxMenuItem(programMenu, ID_Save, "Save Wormhole Tree", "Save wormhole data to disk."));
 	programMenu->Append(new wxMenuItem(programMenu, ID_Load, "Load Wormhole Tree", "Load wormhole data from disk."));
 	programMenu->AppendSeparator();
+	programMenu->Append(new wxMenuItem(programMenu, ID_GenerateImzadiAsset, "Generate Imzadi Asset", "Generate an asset that can be loaded by an application of the Imzadi engine."));
+	programMenu->AppendSeparator();
 	programMenu->Append(new wxMenuItem(programMenu, ID_Exit, "Exit", "Go do something else with your life."));
 
 	wxMenu* optionsMenu = new wxMenu();
@@ -47,6 +49,7 @@ Frame::Frame() : wxFrame(nullptr, wxID_ANY, "Wormhole Generator Test App", wxDef
 	this->Bind(wxEVT_MENU, &Frame::OnSave, this, ID_Save);
 	this->Bind(wxEVT_MENU, &Frame::OnLoad, this, ID_Load);
 	this->Bind(wxEVT_MENU, &Frame::OnClear, this, ID_Clear);
+	this->Bind(wxEVT_MENU, &Frame::OnGenerateImzadiAsset, this, ID_GenerateImzadiAsset);
 	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_DRAW_SPLINES);
 	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_DRAW_POLYGONS);
 	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_DRAW_NODE_POINTS);
@@ -54,6 +57,7 @@ Frame::Frame() : wxFrame(nullptr, wxID_ANY, "Wormhole Generator Test App", wxDef
 	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_Save);
 	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_Load);
 	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_Clear);
+	this->Bind(wxEVT_UPDATE_UI, &Frame::OnUpdateUI, this, ID_GenerateImzadiAsset);
 }
 
 /*virtual*/ Frame::~Frame()
@@ -70,6 +74,20 @@ void Frame::OnClear(wxCommandEvent& event)
 	wxGetApp().wormholeTree.Clear();
 
 	this->canvas->ClearCache();
+}
+
+void Frame::OnGenerateImzadiAsset(wxCommandEvent& event)
+{
+	wxFileDialog fileDialog(this, "Save wormhole Imzadi asset to where?", wxEmptyString, wxEmptyString, "Wormhole Asset Files (*.wormhole_asset)|*.wormhole_asset", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+	if (fileDialog.ShowModal() != wxID_OK)
+		return;
+
+	std::string filePath = fileDialog.GetPath().ToStdString();
+
+	if (!wxGetApp().wormholeTree.GenerateImzadiAsset(filePath))
+	{
+		wxMessageBox("Failed to generate Imzadi asset!", "Error!", wxICON_ERROR | wxOK, this);
+	}
 }
 
 void Frame::OnSave(wxCommandEvent& event)
@@ -200,6 +218,7 @@ void Frame::OnUpdateUI(wxUpdateUIEvent& event)
 		break;
 	case ID_Save:
 	case ID_Clear:
+	case ID_GenerateImzadiAsset:
 		event.Enable(wxGetApp().wormholeTree.GetRootNode() != nullptr);
 		break;
 	case ID_Load:
