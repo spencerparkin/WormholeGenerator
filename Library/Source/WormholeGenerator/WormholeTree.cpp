@@ -6,22 +6,6 @@
 
 using namespace WormholeGenerator;
 
-// STPTODO: Implement the renderer.  DX11 is a good fit, since it's API is much sainer than OpenGL and
-//          I need a programmable shader pipeline.  That is the key to rendering the wormhole properly.
-//          The subtraction of one tube from another will be done in the shader.  The tricky part will
-//          be determining the closest point on a bezier curve to a given point.  I think that Newton
-//          iteration may be helpful here.  Let f(t) = (x - r(t))^2.  We want to minimize this function.
-//          The derivative, I think, is something like f'(t) = 2*(x - r(t)).r'(t).  We want a zero of
-//          this function, so we need f"(t) = 2*r'(t).r"(t), or something like that.  Our seed for the
-//          Newton iteration could be based on a lerp between the two end-points.  That would get us
-//          pretty close to begin with.  All along I had been trying to do math on meshes in space or
-//          some such thing, and generate the polygons, etc., but I really think that a GPU-based approach
-//          is the way to go.  Maybe it's a bit unsatisfying to not figure out the mesh math, but I think
-//          the shader-way of doing this is actually pretty slick, if it can be done efficiently enough.
-//
-//          An alternative approach is to use off-screen rendering and compositing into the final frame
-//          buffer where all we need to do is make clever use of the Z-buffer.
-
 //--------------------------------- WormholeTree ---------------------------------
 
 WormholeTree::WormholeTree()
@@ -51,12 +35,6 @@ bool WormholeTree::Generate(const GeneratorConfig& config, ProgressReporterInter
 
 	this->GeneratePolygons(config, progressReporter);
 
-	// STPTODO: Note that at this point we could still go cull triangles that
-	//          we know should not be there in each tube at an intersection.
-	//          This could help reduce Z-fighting in the renderer.  The renderer
-	//          would then need only deal with triangles that cross the boundary
-	//          between legal and illegal.
-
 	return true;
 }
 
@@ -84,11 +62,7 @@ void WormholeTree::GenerateRecursive(const GeneratorConfig& config, std::shared_
 		childNode->tangentPoint.location = parentNode->tangentPoint.location + unitDirection * distance;
 		childNode->tangentPoint.unitDirection.SetAsRandomDirectionInCone(*config.random, unitDirection, config.maxAngleDeviation);
 
-		std::shared_ptr<Branch> branch = std::make_shared<Branch>();
-
-		branch->node = childNode;
-
-		parentNode->branchArray.push_back(branch);
+		parentNode->nodeArray.push_back(childNode);
 
 		this->GenerateRecursive(config, childNode, currentDepth + 1);
 	}
@@ -176,9 +150,9 @@ void WormholeTree::ForEachRenderLine(int linesPerCurve, std::function<void(const
 		{
 			const TangentPoint& tangentPointA = node->tangentPoint;
 
-			for (int i = 0; i < (int)node->branchArray.size(); i++)
+			for (int i = 0; i < (int)node->nodeArray.size(); i++)
 			{
-				const TangentPoint& tangentPointB = node->branchArray[i]->node->tangentPoint;
+				const TangentPoint& tangentPointB = node->nodeArray[i]->tangentPoint;
 
 				HappyMath::LineSegment line;
 				int k = 0;
@@ -223,8 +197,8 @@ void WormholeTree::ForEachNode(std::function<void(Node*)> nodeFunc)
 
 		nodeFunc(node.get());
 
-		for (int i = 0; i < (int)node->branchArray.size(); i++)
-			nodeArray.push_back(node->branchArray[i]->node);
+		for (int i = 0; i < (int)node->nodeArray.size(); i++)
+			nodeArray.push_back(node->nodeArray[i]);
 	}
 }
 
@@ -261,59 +235,7 @@ void WormholeTree::GeneratePolygons(const GeneratorConfig& config, ProgressRepor
 
 void WormholeTree::GeneratePolygonsForNode(Node* node, const GeneratorConfig& config)
 {
-	for (int i = 0; i < (int)node->branchArray.size(); i++)
-	{
-		auto branch = node->branchArray[i];
-
-		const Node* childNode = branch->node.get();
-
-		HappyMath::Vector3** matrix = new HappyMath::Vector3*[config.numSteps];
-
-		Frame frame;
-
-		for (int row = 0; row < config.numSteps; row++)
-		{
-			double curveParameter = double(row) / double(config.numSteps - 1);
-
-			HappyMath::Vector3 curvePoint;
-			EvaluateCubicBezierCurve(node->tangentPoint, childNode->tangentPoint, curveParameter, curvePoint);
-
-			// STPTODO: Note that this still isn't perfect, because the frame at the end of one tube doesn't match that at the beginning of another.
-			CalcFrame(node->tangentPoint, childNode->tangentPoint, curveParameter, frame, row > 0);
-
-			matrix[row] = new HappyMath::Vector3[config.samplesPerLocation];
-
-			for (int col = 0; col < config.samplesPerLocation; col++)
-			{
-				double angle = (double(col) / double(config.samplesPerLocation)) * 2.0 * M_PI;
-
-				matrix[row][col] = curvePoint + config.wormholeRadius * (frame.xAxis * ::cos(angle) + frame.yAxis * ::sin(angle));
-			}
-		}
-
-		for (int row = 0; row < config.numSteps - 1; row++)
-		{
-			for (int col = 0; col < config.samplesPerLocation; col++)
-			{
-				HappyMath::Polygon polygon;
-				polygon.vertexArray.push_back(matrix[row][col]);
-				polygon.vertexArray.push_back(matrix[row][(col + 1) % config.samplesPerLocation]);
-				polygon.vertexArray.push_back(matrix[row + 1][(col + 1) % config.samplesPerLocation]);
-				branch->AddPolygon(polygon);
-
-				polygon.Clear();
-				polygon.vertexArray.push_back(matrix[row][col]);
-				polygon.vertexArray.push_back(matrix[row + 1][(col + 1) % config.samplesPerLocation]);
-				polygon.vertexArray.push_back(matrix[row + 1][col]);
-				branch->AddPolygon(polygon);
-			}
-		}
-
-		for (int row = 0; row < config.numSteps; row++)
-			delete[] matrix[row];
-
-		delete[] matrix;
-	}
+	// STPTODO: Make surface.  Generate graph from surface.  Generate mesh from graph.
 }
 
 bool WormholeTree::SaveToDisk(const std::string& filePath) const
@@ -368,45 +290,6 @@ WormholeTree::GeneratorConfig::GeneratorConfig()
 	this->wormholeRadius = 0.25;
 }
 
-//--------------------------------- WormholeTree::RenderVertex ---------------------------------
-
-std::string WormholeTree::RenderVertex::MakeKey() const
-{
-	return std::format("{}_{}_{}/{}_{}_{}",
-		this->location.x, this->location.y, this->location.z,
-		this->normal.x, this->normal.y, this->normal.z);
-}
-
-//--------------------------------- WormholeTree::Branch ---------------------------------
-
-void WormholeTree::Branch::AddPolygon(const HappyMath::Polygon& polygon)
-{
-	HappyMath::Plane plane = polygon.CalcPlane(true);
-
-	for (int j = 0; j < (int)polygon.vertexArray.size(); j++)
-	{
-		RenderVertex vertex;
-		vertex.location = polygon.vertexArray[j];
-		vertex.normal = plane.unitNormal;
-
-		std::string key = vertex.MakeKey();
-
-		auto pair = indexBufferMap.find(key);
-		if (pair != indexBufferMap.end())
-		{
-			int index = pair->second;
-			indexBuffer.push_back(index);
-		}
-		else
-		{
-			int index = (int)vertexBuffer.size();
-			indexBuffer.push_back(index);
-			vertexBuffer.push_back(vertex);
-			indexBufferMap.insert(std::pair(key, index));
-		}
-	}
-}
-
 //--------------------------------- WormholeTree::Node ---------------------------------
 
 WormholeTree::Node::Node()
@@ -419,81 +302,10 @@ WormholeTree::Node::Node()
 
 bool WormholeTree::Node::SaveToStream(std::ostream& outputStream) const
 {
-	this->tangentPoint.location.Dump(outputStream);
-	this->tangentPoint.unitDirection.Dump(outputStream);
-
-	int numBranches = (int)branchArray.size();
-	outputStream.write((char*)&numBranches, sizeof(numBranches));
-
-	for (const auto branch : this->branchArray)
-	{
-		int numVertices = (int)branch->vertexBuffer.size();
-		outputStream.write((char*)&numVertices, sizeof(numVertices));
-
-		for (int i = 0; i < numVertices; i++)
-		{
-			const RenderVertex& vertex = branch->vertexBuffer[i];
-			vertex.location.Dump(outputStream);
-			vertex.normal.Dump(outputStream);
-		}
-
-		int numIndices = (int)branch->indexBuffer.size();
-		outputStream.write((char*)&numIndices, sizeof(numIndices));
-		
-		for (int index : branch->indexBuffer)
-			outputStream.write((char*)&index, sizeof(index));
-
-		if (!branch->node.get())
-			return false;
-
-		if (!branch->node->SaveToStream(outputStream))
-			return false;
-	}
-	
-	return true;
+	return false;
 }
 
 bool WormholeTree::Node::LoadFromStream(std::istream& inputStream, std::function<std::shared_ptr<Node>()> nodeMakerFunc)
 {
-	this->tangentPoint.location.Restore(inputStream);
-	this->tangentPoint.unitDirection.Restore(inputStream);
-
-	int numChildren = 0;
-	inputStream.read((char*)&numChildren, sizeof(numChildren));
-
-	for (int i = 0; i < numChildren; i++)
-	{
-		auto branch = std::make_shared<Branch>();
-
-		int numVertices = 0;
-		inputStream.read((char*)&numVertices, sizeof(numVertices));
-		branch->vertexBuffer.reserve(numVertices);
-
-		for (int j = 0; j < numVertices; j++)
-		{
-			RenderVertex vertex;
-			vertex.location.Restore(inputStream);
-			vertex.normal.Restore(inputStream);
-			branch->vertexBuffer.push_back(vertex);
-		}
-
-		int numIndices = 0;
-		inputStream.read((char*)&numIndices, sizeof(numIndices));
-		branch->indexBuffer.reserve(numIndices);
-
-		for (int j = 0; j < numIndices; j++)
-		{
-			int index = 0;
-			inputStream.read((char*)&index, sizeof(index));
-			branch->indexBuffer.push_back(index);
-		}
-
-		branch->node = nodeMakerFunc();
-		if (!branch->node->LoadFromStream(inputStream, nodeMakerFunc))
-			return false;
-
-		this->branchArray.push_back(branch);
-	}
-
-	return true;
+	return false;
 }

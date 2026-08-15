@@ -136,24 +136,7 @@ void Canvas::OnPaint(wxPaintEvent& event)
 
 		wxGetApp().wormholeTree.ForEachNode([&r, &g, &b](const WormholeGenerator::WormholeTree::Node* node) -> void
 			{
-				for (int i = 0; i < (int)node->branchArray.size(); i++)
-				{
-					const auto branch = node->branchArray[i];
-
-					r = ::fmod(r + 0.53, 1.0);
-					g = ::fmod(g + 0.87, 1.0);
-					b = ::fmod(b + 0.62, 1.0);
-
-					glColor3d(r, g, b);
-
-					for (uint32_t index : branch->indexBuffer)
-					{
-						const WormholeGenerator::WormholeTree::RenderVertex& vertex = branch->vertexBuffer[index];
-
-						glNormal3d(vertex.normal.x, vertex.normal.y, vertex.normal.z);
-						glVertex3d(vertex.location.x, vertex.location.y, vertex.location.z);
-					}
-				}
+				// STPTODO: Render triangle mesh for the node.
 			});
 
 		glEnd();

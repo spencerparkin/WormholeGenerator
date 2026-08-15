@@ -53,27 +53,6 @@ namespace WormholeGenerator
 			double wormholeRadius;
 		};
 
-		struct RenderVertex
-		{
-			HappyMath::Vector3 location;
-			HappyMath::Vector3 normal;
-
-			std::string MakeKey() const;
-		};
-
-		class Node;
-
-		class Branch
-		{
-		public:
-			std::shared_ptr<Node> node;
-			std::vector<RenderVertex> vertexBuffer;
-			std::vector<uint32_t> indexBuffer;
-			std::unordered_map<std::string, uint32_t> indexBufferMap;
-
-			void AddPolygon(const HappyMath::Polygon& polygon);
-		};
-
 		class Node : public std::enable_shared_from_this<Node>
 		{
 		public:
@@ -84,8 +63,8 @@ namespace WormholeGenerator
 			bool LoadFromStream(std::istream& inputStream, std::function<std::shared_ptr<Node>()> nodeMakerFunc);
 
 			TangentPoint tangentPoint;
-
-			std::vector<std::shared_ptr<Branch>> branchArray;
+			HappyMath::PolygonMesh mesh;
+			std::vector<std::shared_ptr<Node>> nodeArray;
 		};
 
 		class ProgressReporterInterface
