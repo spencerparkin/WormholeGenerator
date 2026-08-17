@@ -116,8 +116,6 @@ void Frame::OnGenerate(wxCommandEvent& event)
 	config.minDistBetweenNodes = 1.0;
 	config.maxDistBetweenNodes = 2.0;
 	config.maxBranchFactor = 2;
-	config.samplesPerLocation = 16;
-	config.numSteps = 32;
 	config.wormholeRadius = 0.2;
 
 	class ProgressReporter : public WormholeGenerator::WormholeTree::ProgressReporterInterface

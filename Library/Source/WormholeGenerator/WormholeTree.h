@@ -6,6 +6,7 @@
 #include "HappyMath/Polygon.h"
 #include "HappyMath/Graph.h"
 #include "HappyMath/PolygonMesh.h"
+#include "HappyMath/Surface.h"
 #include <memory>
 #include <vector>
 #include <functional>
@@ -18,7 +19,7 @@ namespace WormholeGenerator
 	 * continuity of the derivative across boundaries, but we're also
 	 * a tree.  This allows the curve to branch.
 	 */
-	class WormholeTree
+	class WormholeTree : public HappyMath::Surface
 	{
 	private:
 		friend class Traveler;
@@ -28,6 +29,8 @@ namespace WormholeGenerator
 
 		WormholeTree();
 		virtual ~WormholeTree();
+
+		virtual bool FindNearestPoint(const HappyMath::Vector3& point, HappyMath::Vector3& surfacePoint, HappyMath::Vector3& surfaceNormal) const override;
 
 		struct TangentPoint
 		{
@@ -48,12 +51,10 @@ namespace WormholeGenerator
 			int maxBranchFactor;
 			double minDistBetweenNodes;
 			double maxDistBetweenNodes;
-			int samplesPerLocation;
-			int numSteps;
 			double wormholeRadius;
 		};
 
-		class Node : public std::enable_shared_from_this<Node>
+		class Node
 		{
 		public:
 			Node();
@@ -90,9 +91,7 @@ namespace WormholeGenerator
 
 	private:
 
-		void GeneratePolygons(const GeneratorConfig& config, ProgressReporterInterface* progressReporter);
 		void GenerateRecursive(const GeneratorConfig& config, std::shared_ptr<Node> parentNode, int currentDepth);
-		void GeneratePolygonsForNode(Node* node, const GeneratorConfig& config);
 
 		struct Frame
 		{
@@ -106,6 +105,7 @@ namespace WormholeGenerator
 		static void EvaluateCubicBezierCurveSecondDerivative(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, HappyMath::Vector3& secondCurveDerivative);
 		static void GenerateCubicBezierControlPoints(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, HappyMath::Vector3* controlPointArray);
 		static void CalcFrame(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, Frame& frame, bool advance);
+		static void FindNearestPointOnBezierCurveToGivenPoint(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double& curveParameter, const HappyMath::Vector3& givenPoint);
 
 		std::shared_ptr<Node> rootNode;
 	};

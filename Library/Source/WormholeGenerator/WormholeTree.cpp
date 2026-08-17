@@ -33,9 +33,28 @@ bool WormholeTree::Generate(const GeneratorConfig& config, ProgressReporterInter
 
 	this->GenerateRecursive(config, this->rootNode, 0);
 
-	this->GeneratePolygons(config, progressReporter);
+#if 0	// STPTODO: Uncomment when ready.
+	HappyMath::Graph graph;
+	if (!graph.FromSurface(this, 5, 0.05, HappyMath::Vector3(0.0, 0.0, 0.0)))
+		return false;
+
+	HappyMath::PolygonMesh mesh;
+	if (!graph.ToPolygonMesh(mesh))
+		return false;
+#endif
+
+	// STPTODO: Distribute polygons from the mesh to the various nodes.
+	//          At run-time, only those nodes near the viewer are rendered rather
+	//          then rendering them all at all times.
 
 	return true;
+}
+
+/*virtual*/ bool WormholeTree::FindNearestPoint(const HappyMath::Vector3& point, HappyMath::Vector3& surfacePoint, HappyMath::Vector3& surfaceNormal) const
+{
+	// STPTODO: Write this.
+
+	return false;
 }
 
 void WormholeTree::GenerateRecursive(const GeneratorConfig& config, std::shared_ptr<Node> parentNode, int currentDepth)
@@ -116,6 +135,11 @@ void WormholeTree::GenerateRecursive(const GeneratorConfig& config, std::shared_
 	double omt = 1.0 - t;
 
 	secondCurveDerivative = 6.0 * omt * (point[2] - 2.0 * point[1] + point[0]) + 6.0 * t * (point[3] - 2.0 * point[2] + point[1]);
+}
+
+/*static*/ void WormholeTree::FindNearestPointOnBezierCurveToGivenPoint(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double& curveParameter, const HappyMath::Vector3& givenPoint)
+{
+	//...
 }
 
 /*static*/ void WormholeTree::CalcFrame(const TangentPoint& tangentPointA, const TangentPoint& tangentPointB, double curveParameter, Frame& frame, bool advance)
@@ -202,42 +226,6 @@ void WormholeTree::ForEachNode(std::function<void(Node*)> nodeFunc)
 	}
 }
 
-void WormholeTree::GeneratePolygons(const GeneratorConfig& config, ProgressReporterInterface* progressReporter)
-{
-	int numNodes = 0;
-
-	if (progressReporter)
-	{
-		this->ForEachNode([&numNodes](Node* node) -> void
-			{
-				numNodes++;
-			});
-
-		progressReporter->BeginTask("Generating polygons...");
-	}
-
-	int i = 0;
-
-	this->ForEachNode([this, config, progressReporter, &i, numNodes](Node* node) -> void
-		{
-			this->GeneratePolygonsForNode(node, config);
-
-			if (progressReporter)
-			{
-				double progress = double(++i) / double(numNodes);
-				progressReporter->TaskUpdate(progress);
-			}
-		});
-
-	if (progressReporter)
-		progressReporter->EndTask();
-}
-
-void WormholeTree::GeneratePolygonsForNode(Node* node, const GeneratorConfig& config)
-{
-	// STPTODO: Make surface.  Generate graph from surface.  Generate mesh from graph.
-}
-
 bool WormholeTree::SaveToDisk(const std::string& filePath) const
 {
 	if (!this->rootNode.get())
@@ -285,8 +273,6 @@ WormholeTree::GeneratorConfig::GeneratorConfig()
 	this->maxBranchFactor = 2;
 	this->minDistBetweenNodes = 10.0;
 	this->maxDistBetweenNodes = 15.0;
-	this->samplesPerLocation = 32;
-	this->numSteps = 32;
 	this->wormholeRadius = 0.25;
 }
 
